@@ -44,7 +44,7 @@ class button():
         return False
 
 # This sets the WIDTH and HEIGHT of each grid location
-WIDTH = 5
+WIDTH = 20
 HEIGHT = WIDTH # so they are squares
  
 # This sets the margin between each cell
@@ -52,7 +52,7 @@ MARGIN = 1
 
 # Create a 2 dimensional array (a list of lists)
 grid = []
-ROWS = 120
+ROWS = 40
 for row in range(ROWS):
     # Add an empty array that will hold each cell
     grid.append([])
@@ -209,7 +209,7 @@ while not done:
         return from_dict, to_dict
 
     # Run Dijkstra's algorithm
-    async def path_finder(mazearray, start_point=(0,0), goal_node=False, display=pygame.display, visualise=True):
+    async def path_finder(mazearray, start_point=(0,0), goal_node=False, display=pygame.display, visualise=True, diagonals=False):
 
         # Get the dimensions of the (square) maze
         n = len(mazearray) - 1
@@ -244,25 +244,25 @@ while not done:
                 (current_node[0],min(n,current_node[1]+1)),
                 (current_node[0],max(0,current_node[1]-1))
                 )
-
-            diag_neighbours = (
-                (min(n,current_node[0]+1),min(n,current_node[1]+1)),
-                (min(n,current_node[0]+1),max(0,current_node[1]-1)),
-                (max(0,current_node[0]-1),min(n,current_node[1]+1)),
-                (max(0,current_node[0]-1),max(0,current_node[1]-1))
-            )
-
-            await asyncio.gather(*(neighbours_loop(
-                neighbour, 
-                mazearr=mazearray, 
-                visited_nodes=visited_nodes, 
-                unvisited_nodes=unvisited_nodes, 
-                queue=queue, 
-                v_distances=v_distances, 
-                current_node=current_node,
-                current_distance=current_distance,
-                diags=True
-                ) for neighbour in diag_neighbours))
+            
+            if diagonals:
+                diag_neighbours = (
+                    (min(n,current_node[0]+1),min(n,current_node[1]+1)),
+                    (min(n,current_node[0]+1),max(0,current_node[1]-1)),
+                    (max(0,current_node[0]-1),min(n,current_node[1]+1)),
+                    (max(0,current_node[0]-1),max(0,current_node[1]-1))
+                )         
+                await asyncio.gather(*(neighbours_loop(
+                    neighbour, 
+                    mazearr=mazearray, 
+                    visited_nodes=visited_nodes, 
+                    unvisited_nodes=unvisited_nodes, 
+                    queue=queue, 
+                    v_distances=v_distances, 
+                    current_node=current_node,
+                    current_distance=current_distance,
+                    diags=True
+                    ) for neighbour in diag_neighbours))
 
             # Asynchronous call to check neighbours of the current node
             await asyncio.gather(*(neighbours_loop(
@@ -275,7 +275,7 @@ while not done:
                 current_node=current_node,
                 current_distance=current_distance
                 ) for neighbour in neighbours))
-        
+
 
             # When we have checked the current node, add and remove appropriately
             visited_nodes.add(current_node)
@@ -341,21 +341,29 @@ while not done:
                 queue.push(current_distance+(2**0.5), neighbour)
 
     # trace a path back from the end node to the start node after the algorithm has been run
-    def trace_back(goal_node, start_node, v_distances, n, mazearray):
+    def trace_back(goal_node, start_node, v_distances, n, mazearray, diags=False):
         path = [goal_node]
         current_node = goal_node
         distance = v_distances[goal_node]
         while current_node != start_node:
-            neighbours = (
-                (min(n,current_node[0]+1),current_node[1]),
-                (max(0,current_node[0]-1),current_node[1]),
-                (current_node[0],min(n,current_node[1]+1)),
-                (current_node[0],max(0,current_node[1]-1)),
-                (min(n,current_node[0]+1),min(n,current_node[1]+1)),
-                (min(n,current_node[0]+1),max(0,current_node[1]-1)),
-                (max(0,current_node[0]-1),min(n,current_node[1]+1)),
-                (max(0,current_node[0]-1),max(0,current_node[1]-1))
+            if not diags:
+                neighbours = (
+                    (min(n,current_node[0]+1),current_node[1]),
+                    (max(0,current_node[0]-1),current_node[1]),
+                    (current_node[0],min(n,current_node[1]+1)),
+                    (current_node[0],max(0,current_node[1]-1))
                 )
+            else:
+                neighbours = (
+                    (min(n,current_node[0]+1),current_node[1]),
+                    (max(0,current_node[0]-1),current_node[1]),
+                    (current_node[0],min(n,current_node[1]+1)),
+                    (current_node[0],max(0,current_node[1]-1)),
+                    (min(n,current_node[0]+1),min(n,current_node[1]+1)),
+                    (min(n,current_node[0]+1),max(0,current_node[1]-1)),
+                    (max(0,current_node[0]-1),min(n,current_node[1]+1)),
+                    (max(0,current_node[0]-1),max(0,current_node[1]-1))
+                    )
             try:
                 distance = v_distances[current_node]
             except Exception as e:
