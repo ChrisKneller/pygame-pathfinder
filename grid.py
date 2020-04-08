@@ -1,7 +1,6 @@
 import pygame
 import asyncio
 import time
-from heapq import heapify, heappush, heappop
 from priority_queue import PrioritySet
 
 # Define some colors
@@ -217,7 +216,6 @@ while not done:
         # Create the various data structures with speed in mind
         visited_nodes = set()
         unvisited_nodes = set([(x,y) for x in range(n+1) for y in range(n+1)])
-        # distances = {(x,y):float("inf") for x in range(n+1) for y in range(n+1)}
         queue = PrioritySet()
         queue.push(0, start_point)
         v_distances = {}
@@ -226,13 +224,9 @@ while not done:
         if not goal_node:
             goal_node = (n,n)
         current_distance, current_node = queue.pop()
-        
+        start = time.perf_counter()
         # Main algorithm loop
         while current_node != goal_node and len(unvisited_nodes) > 0:
-            # print(f"Testing {current_node} with distance of {current_distance}")
-            # print(f"Current queue is: {queue.show()}")
-            # time.sleep(1)
-            
             if current_node in visited_nodes:
                 current_distance, current_node = queue.pop()
                 continue
@@ -283,7 +277,6 @@ while not done:
             
             # Move the visited node with its distance between the two dicts
             v_distances[current_node] = current_distance
-            # distances, v_distances = dict_move(distances, v_distances, current_node)
             
             # Pygame part: visited nodes mark visited nodes as green
             if (current_node[0],current_node[1]) != start_point:
@@ -302,7 +295,7 @@ while not done:
                 # then we update the grid with each loop
                 if visualise:
                     pygame.display.update()
-                    time.sleep(0.00001)
+                    time.sleep(0.01)
             
             # Try here in case distances dict is empty
             if len(queue.show()) == 0:
@@ -333,7 +326,6 @@ while not done:
         elif mazearr[neighbour[0]][neighbour[1]] == 'W':
             visited_nodes.add(neighbour)
             unvisited_nodes.discard(neighbour)
-            # distances, v_distances = dict_move(distances, v_distances, neighbour)
         else:
             if not diags:
                 queue.push(current_distance+1, neighbour)
