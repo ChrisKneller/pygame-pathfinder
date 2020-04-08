@@ -245,6 +245,25 @@ while not done:
                 (current_node[0],max(0,current_node[1]-1))
                 )
 
+            diag_neighbours = (
+                (min(n,current_node[0]+1),min(n,current_node[1]+1)),
+                (min(n,current_node[0]+1),max(0,current_node[1]-1)),
+                (max(0,current_node[0]-1),min(n,current_node[1]+1)),
+                (max(0,current_node[0]-1),max(0,current_node[1]-1))
+            )
+
+            await asyncio.gather(*(neighbours_loop(
+                neighbour, 
+                mazearr=mazearray, 
+                visited_nodes=visited_nodes, 
+                unvisited_nodes=unvisited_nodes, 
+                queue=queue, 
+                v_distances=v_distances, 
+                current_node=current_node,
+                current_distance=current_distance,
+                diags=True
+                ) for neighbour in diag_neighbours))
+
             # Asynchronous call to check neighbours of the current node
             await asyncio.gather(*(neighbours_loop(
                 neighbour, 
@@ -256,7 +275,8 @@ while not done:
                 current_node=current_node,
                 current_distance=current_distance
                 ) for neighbour in neighbours))
-            
+        
+
             # When we have checked the current node, add and remove appropriately
             visited_nodes.add(current_node)
             unvisited_nodes.discard(current_node)
@@ -307,7 +327,7 @@ while not done:
 
 
     # asyncronous loop to check all neighbours of the "current node"
-    async def neighbours_loop(neighbour, mazearr, visited_nodes, unvisited_nodes, queue, v_distances, current_node, current_distance):
+    async def neighbours_loop(neighbour, mazearr, visited_nodes, unvisited_nodes, queue, v_distances, current_node, current_distance, diags=False):
         if neighbour in visited_nodes:
             pass
         elif mazearr[neighbour[0]][neighbour[1]] == 'W':
@@ -315,7 +335,10 @@ while not done:
             unvisited_nodes.discard(neighbour)
             # distances, v_distances = dict_move(distances, v_distances, neighbour)
         else:
-            queue.push(current_distance+1, neighbour)
+            if not diags:
+                queue.push(current_distance+1, neighbour)
+            else: 
+                queue.push(current_distance+(2**0.5), neighbour)
 
     # trace a path back from the end node to the start node after the algorithm has been run
     def trace_back(goal_node, start_node, v_distances, n, mazearray):
@@ -327,7 +350,11 @@ while not done:
                 (min(n,current_node[0]+1),current_node[1]),
                 (max(0,current_node[0]-1),current_node[1]),
                 (current_node[0],min(n,current_node[1]+1)),
-                (current_node[0],max(0,current_node[1]-1))
+                (current_node[0],max(0,current_node[1]-1)),
+                (min(n,current_node[0]+1),min(n,current_node[1]+1)),
+                (min(n,current_node[0]+1),max(0,current_node[1]-1)),
+                (max(0,current_node[0]-1),min(n,current_node[1]+1)),
+                (max(0,current_node[0]-1),max(0,current_node[1]-1))
                 )
             try:
                 distance = v_distances[current_node]
@@ -336,7 +363,7 @@ while not done:
             for neighbour in neighbours:
                 if neighbour == current_node:
                     continue
-                elif neighbour in v_distances and v_distances[neighbour] == distance - 1:
+                elif neighbour in v_distances and v_distances[neighbour] <= distance - 1:
                     distance = v_distances[neighbour]
                     mazearray[current_node[0]][current_node[1]] = "X"
                     path.append(neighbour)
