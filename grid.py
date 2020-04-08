@@ -1,7 +1,8 @@
 import pygame
 import asyncio
 import time
-
+from heapq import heapify, heappush, heappop
+from priority_queue import PrioritySet
 
 # Define some colors
 BLACK = (0, 0, 0)
@@ -43,15 +44,15 @@ class button():
         return False
 
 # This sets the WIDTH and HEIGHT of each grid location
-WIDTH = 20
+WIDTH = 5
 HEIGHT = WIDTH # so they are squares
  
 # This sets the margin between each cell
-MARGIN = 2
+MARGIN = 1
 
 # Create a 2 dimensional array (a list of lists)
 grid = []
-ROWS = 30
+ROWS = 120
 for row in range(ROWS):
     # Add an empty array that will hold each cell
     grid.append([])
@@ -216,17 +217,25 @@ while not done:
         # Create the various data structures with speed in mind
         visited_nodes = set()
         unvisited_nodes = set([(x,y) for x in range(n+1) for y in range(n+1)])
-        distances = {(x,y):float("inf") for x in range(n+1) for y in range(n+1)}
-        distances[start_point] = 0
+        # distances = {(x,y):float("inf") for x in range(n+1) for y in range(n+1)}
+        queue = PrioritySet()
+        queue.push(0, start_point)
         v_distances = {}
 
         # If a goal_node is not set, put it in the bottom right (1 square away from either edge)
         if not goal_node:
             goal_node = (n,n)
-        current_node = start_point
+        current_distance, current_node = queue.pop()
         
         # Main algorithm loop
         while current_node != goal_node and len(unvisited_nodes) > 0:
+            # print(f"Testing {current_node} with distance of {current_distance}")
+            # print(f"Current queue is: {queue.show()}")
+            # time.sleep(1)
+            
+            if current_node in visited_nodes:
+                current_distance, current_node = queue.pop()
+                continue
             
             # Neighbours defined as 1 square above, below, left or right
             neighbours = (
@@ -242,9 +251,10 @@ while not done:
                 mazearr=mazearray, 
                 visited_nodes=visited_nodes, 
                 unvisited_nodes=unvisited_nodes, 
-                distances=distances, 
+                queue=queue, 
                 v_distances=v_distances, 
-                current_node=current_node
+                current_node=current_node,
+                current_distance=current_distance
                 ) for neighbour in neighbours))
             
             # When we have checked the current node, add and remove appropriately
@@ -252,7 +262,8 @@ while not done:
             unvisited_nodes.discard(current_node)
             
             # Move the visited node with its distance between the two dicts
-            distances, v_distances = dict_move(distances, v_distances, current_node)
+            v_distances[current_node] = current_distance
+            # distances, v_distances = dict_move(distances, v_distances, current_node)
             
             # Pygame part: visited nodes mark visited nodes as green
             if (current_node[0],current_node[1]) != start_point:
@@ -274,23 +285,21 @@ while not done:
                     time.sleep(0.00001)
             
             # Try here in case distances dict is empty
-            try:
-                current_node = min(distances, key=distances.get)
-                # If the smallest distance is infinity then that means
-                # we have no more nodes to test and the current node
-                # is not yet the goal node so we exit
-                if distances[current_node] == float('inf'):
-                    return False
-            except:
-                pass
+            if len(queue.show()) == 0:
+                return False
+            else:
+                current_distance, current_node = queue.pop()
+
 
         # Mark the goal node as a goal node again after it will have
         # temporarily been switched to a current node
-        if distances[goal_node] != float('inf'):
+        if current_node == goal_node:
             mazearray[goal_node[0]][goal_node[1]] = "E"
-    
+        
+        v_distances[goal_node] = current_distance
+
         # Draw the path back from goal node to start node
-        trace_back(goal_node, start_point, distances, v_distances, n, mazearray)
+        trace_back(goal_node, start_point, v_distances, n, mazearray)
 
         # The commented out line returns the distance to the end node
         # return False if v_distances[goal_node] == float('inf') else v_distances[goal_node]
@@ -298,22 +307,18 @@ while not done:
 
 
     # asyncronous loop to check all neighbours of the "current node"
-    async def neighbours_loop(neighbour, mazearr, visited_nodes, unvisited_nodes, distances, v_distances, current_node):
+    async def neighbours_loop(neighbour, mazearr, visited_nodes, unvisited_nodes, queue, v_distances, current_node, current_distance):
         if neighbour in visited_nodes:
             pass
         elif mazearr[neighbour[0]][neighbour[1]] == 'W':
             visited_nodes.add(neighbour)
             unvisited_nodes.discard(neighbour)
-            distances, v_distances = dict_move(distances, v_distances, neighbour)
-        elif distances[current_node] + 1 < distances[neighbour]:
-            distances[neighbour] = distances[current_node] + 1
+            # distances, v_distances = dict_move(distances, v_distances, neighbour)
         else:
-            pass
-
+            queue.push(current_distance+1, neighbour)
 
     # trace a path back from the end node to the start node after the algorithm has been run
-    def trace_back(goal_node, start_node, distances, v_distances, n, mazearray):
-        distances, v_distances = dict_move(distances, v_distances, goal_node)
+    def trace_back(goal_node, start_node, v_distances, n, mazearray):
         path = [goal_node]
         current_node = goal_node
         distance = v_distances[goal_node]
@@ -331,9 +336,7 @@ while not done:
             for neighbour in neighbours:
                 if neighbour == current_node:
                     continue
-                elif neighbour in distances:
-                    continue
-                elif v_distances[neighbour] == distance - 1:
+                elif neighbour in v_distances and v_distances[neighbour] == distance - 1:
                     distance = v_distances[neighbour]
                     mazearray[current_node[0]][current_node[1]] = "X"
                     path.append(neighbour)
