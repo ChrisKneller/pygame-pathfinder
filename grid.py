@@ -1,6 +1,6 @@
 import pygame
 import time
-from priority_queue import PrioritySet
+from priority_queue import PrioritySet, PriorityQueue
 
 # Define some colors
 BLACK = (0, 0, 0)
@@ -208,7 +208,7 @@ while not done:
         return from_dict, to_dict
 
     # Run Dijkstra's algorithm
-    def path_finder(mazearray, start_point=(0,0), goal_node=False, display=pygame.display, visualise=True, diagonals=False):
+    def path_finder(mazearray, start_point=(0,0), goal_node=False, display=pygame.display, visualise=True, diagonals=True):
 
         start = time.perf_counter()
 
@@ -218,7 +218,7 @@ while not done:
         # Create the various data structures with speed in mind
         visited_nodes = set()
         unvisited_nodes = set([(x,y) for x in range(n+1) for y in range(n+1)])
-        queue = PrioritySet()
+        queue = PriorityQueue()
         queue.push(0, start_point)
         v_distances = {}
 
@@ -325,7 +325,7 @@ while not done:
         v_distances[goal_node] = current_distance + (1 if not diagonals else 2**0.5)
 
         # Draw the path back from goal node to start node
-        trace_back(goal_node, start_point, v_distances, n, mazearray)
+        trace_back(goal_node, start_point, v_distances, n, mazearray, diags=diagonals)
 
         end = time.perf_counter()
         num_visited = len(visited_nodes)

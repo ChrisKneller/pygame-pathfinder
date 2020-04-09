@@ -1,5 +1,21 @@
 import heapq
 
+# Create a priority queue
+class PriorityQueue(object):
+    def __init__(self):
+        self.myheap = []
+
+    def show(self):
+        return self.myheap
+
+    def push(self, priority, node):
+        heapq.heappush(self.myheap, (priority, node))
+
+    def pop(self):
+        priority, node = heapq.heappop(self.myheap)
+        return priority, node
+
+
 # Create a priority queue that doesn't add duplicate nodes
 class PrioritySet(object):
     def __init__(self):
