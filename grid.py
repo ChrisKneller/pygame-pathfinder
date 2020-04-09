@@ -8,8 +8,12 @@ WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
-WALL = (143,143,143)
+WALL = (143, 143, 143)
+BROWN = (186, 127, 50)
+DARK_GREEN = (0, 128, 0)
+DARK_BLUE = (0, 0, 128)
 
+MUD_MODIFIER = 2
 
 # For creating buttons
 class button():
@@ -42,7 +46,7 @@ class button():
         return False
 
 # This sets the WIDTH and HEIGHT of each grid location
-WIDTH = 7
+WIDTH = 20
 HEIGHT = WIDTH # so they are squares
 BUTTON_HEIGHT = 50
 
@@ -51,7 +55,7 @@ MARGIN = 1
 
 # Create a 2 dimensional array (a list of lists)
 grid = []
-ROWS = 90
+ROWS = 20
 for row in range(ROWS):
     # Add an empty array that will hold each cell
     grid.append([])
@@ -104,6 +108,9 @@ while not done:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             pos = pygame.mouse.get_pos()
             
+            # find out which keys have been pressed
+            pressed = pygame.key.get_pressed()
+
             # If click is inside grid
             if pos[1] <= SCREEN_WIDTH-1:
                 # Change the x/y screen coordinates to grid coordinates
@@ -115,19 +122,28 @@ while not done:
                 elif (row,column) == END_POINT:
                     drag_end_point = True
                 else:
+                    # Add walls ("W") or sticky mud patches ("M")
                     cell_updated = grid[row][column]
-                    grid[row][column] = 'W'
+                    if pressed[pygame.K_LCTRL]:
+                        if grid[row][column] == 'V':
+                            grid[row][column] = 'VM'
+                        elif grid[row][column] == 'X':
+                            grid[row][column] = 'XM'
+                        else:
+                            grid[row][column] = 'M'
+                    else:
+                        grid[row][column] = 'W'
                     mouse_drag = True
+                    # pygame.display.flip()
+                    # time.sleep(1)
                     if algorithm_run and cell_updated != 'V':
                         path_found = update_path()
             
             # When the Go button is clicked
             elif goButton.isOver(pos):
-                for row in range(ROWS):
-                    for column in range(ROWS):
-                        if (row,column) != START_POINT and (row,column) != END_POINT and grid[row][column] != 'W':
-                            grid[row][column] = 0
+                clear_visited()
                 update_gui(draw_background=False, draw_buttons=False)
+                pygame.display.flip()
                 path_found = path_finder(grid, START_POINT, END_POINT)
                 grid[START_POINT[0]][START_POINT[1]] = 'S'
                 algorithm_run = True
@@ -158,13 +174,33 @@ while not done:
                 mouse_drag = False
                 continue
             
-            # Build walls
+            # Add walls ("W") or sticky mud patches ("M")
             if mouse_drag == True:
-                if (row,column) != START_POINT and (row,column) != END_POINT:
-                    cell_updated = grid[row][column]
+                cell_updated = grid[row][column]
+                if pressed[pygame.K_LCTRL]:
+                    if grid[row][column] == 'V':
+                        grid[row][column] = 'VM'
+                    elif grid[row][column] == 'X':
+                        grid[row][column] = 'XM'
+                    else:
+                        grid[row][column] = 'M'
+                else:
                     grid[row][column] = 'W'
-                    if algorithm_run and cell_updated == 'X':
-                        path_found = update_path()
+                if algorithm_run and cell_updated != 'V':
+                    path_found = update_path()
+                # if (row,column) != START_POINT and (row,column) != END_POINT:
+                #     cell_updated = grid[row][column]
+                #     if pressed[pygame.K_LCTRL]:
+                #         if grid[row][column] == 'V':
+                #             grid[row][column] = 'VM'
+                #         elif grid[row][column] == 'X':
+                #             grid[row][column] = 'XM'
+                #         elif grid[row][column] != ('VM' or 'XM'):
+                #             grid[row][column] = 'M'
+                #     else:
+                #         grid[row][column] = 'W'
+                #     if algorithm_run and cell_updated != 'V':
+                #         path_found = update_path()
             
             # Move the start point
             elif drag_start_point == True:
@@ -188,11 +224,19 @@ while not done:
  
     # Game logic
 
-    # Clear board, keeping start, end and wall nodes
+    # Clear board, keeping excluded nodes
     def clear_visited():
+        excluded_nodes = [START_POINT, END_POINT] 
+        excluded_markers = ['W', 'M', 'VM', 'XM']
         for row in range(ROWS):
             for column in range(ROWS):
-                if (row,column) != START_POINT and (row,column) != END_POINT and grid[row][column] != 'W':
+                if grid[row][column] == "VM":
+                    grid[row][column] = "M"
+                elif grid[row][column] == "XM":
+                    grid[row][column] = "M"
+                elif grid[row][column] == "V":
+                    grid[row][column] = 0
+                elif (row,column) not in excluded_nodes and grid[row][column] not in excluded_markers:
                     grid[row][column] = 0
         update_gui(draw_background=False, draw_buttons=False)
 
@@ -258,17 +302,6 @@ while not done:
                     ((max(0,current_node[0]-1),min(n,current_node[1]+1)),"x"),
                     ((max(0,current_node[0]-1),max(0,current_node[1]-1)),"x")
                 )  
-            # for neighbour in neighbours:
-            #     neighbours_loop(
-            #         neighbour, 
-            #         mazearr=mazearray, 
-            #         visited_nodes=visited_nodes, 
-            #         unvisited_nodes=unvisited_nodes, 
-            #         queue=queue, 
-            #         v_distances=v_distances, 
-            #         current_node=current_node,
-            #         current_distance=current_distance,
-            #     )
 
             # Call to check neighbours of the current node
             for neighbour in neighbours:
@@ -293,16 +326,29 @@ while not done:
             
             # Pygame part: visited nodes mark visited nodes as green
             if (current_node[0],current_node[1]) != start_point:
-                mazearray[current_node[0]][current_node[1]] = "V"
-                pygame.draw.rect(
-                    screen,
-                    GREEN,
-                    [
-                    (MARGIN + WIDTH) * current_node[1] + MARGIN,
-                    (MARGIN + HEIGHT) * current_node[0] + MARGIN,
-                    WIDTH,
-                    HEIGHT
-                    ]
+                if mazearray[current_node[0]][current_node[1]] == ("M" or "XM" or "VM"):
+                    mazearray[current_node[0]][current_node[1]] = "VM"
+                    pygame.draw.rect(
+                        screen,
+                        DARK_GREEN,
+                        [
+                        (MARGIN + WIDTH) * current_node[1] + MARGIN,
+                        (MARGIN + HEIGHT) * current_node[0] + MARGIN,
+                        WIDTH,
+                        HEIGHT
+                        ]
+                    )
+                else:
+                    mazearray[current_node[0]][current_node[1]] = "V"
+                    pygame.draw.rect(
+                        screen,
+                        GREEN,
+                        [
+                        (MARGIN + WIDTH) * current_node[1] + MARGIN,
+                        (MARGIN + HEIGHT) * current_node[0] + MARGIN,
+                        WIDTH,
+                        HEIGHT
+                        ]
                     )
                 # If we want to visualise it (rather than run instantly)
                 # then we update the grid with each loop
@@ -356,10 +402,14 @@ while not done:
             visited_nodes.add(neighbour)
             unvisited_nodes.discard(neighbour)
         else:
+            if mazearr[neighbour[0]][neighbour[1]] == ('M' or 'VM' or 'XM'):
+                modifier = MUD_MODIFIER
+            else:
+                modifier = 1
             if ntype == "+":
-                queue.push(current_distance+1, neighbour)
+                queue.push(current_distance+(1*modifier), neighbour)
             elif ntype == "x": 
-                queue.push(current_distance+(2**0.5), neighbour)
+                queue.push(current_distance+((2**0.5)*modifier), neighbour)
 
     # trace a path back from the end node to the start node after the algorithm has been run
     def trace_back(goal_node, start_node, v_distances, visited_nodes, n, mazearray, diags=False):
@@ -411,7 +461,10 @@ while not done:
             
             # Pop the lowest value off; that is the next node in our path
             distance, smallest_neighbour = neighbour_distances.pop()
-            mazearray[smallest_neighbour[0]][smallest_neighbour[1]] = "X"
+            if mazearray[smallest_neighbour[0]][smallest_neighbour[1]] == ("VM" or "XM"):
+                mazearray[smallest_neighbour[0]][smallest_neighbour[1]] = "XM"
+            else:
+                mazearray[smallest_neighbour[0]][smallest_neighbour[1]] = "X"
             path.append(smallest_neighbour)
             current_node = smallest_neighbour
 
@@ -434,13 +487,20 @@ while not done:
             # Draw the grid
             for row in range(ROWS):
                 for column in range(ROWS):
-                    color = WHITE
-                    if grid[row][column] == 'V':
+                    if grid[row][column] == 0:
+                        color = WHITE
+                    elif grid[row][column] == 'V':
                         color = GREEN
                     elif grid[row][column] == 'W':
                         color = WALL
+                    elif grid[row][column] == 'M':
+                        color = BROWN
+                    elif grid[row][column] == 'VM':
+                        color = DARK_GREEN
                     elif grid[row][column] == 'S' or grid[row][column] == 'E' or grid[row][column] == 'X':
                         color = BLUE
+                    elif grid[row][column] == 'XM':
+                        color = DARK_BLUE
                     pygame.draw.rect(
                         screen,
                         color,
