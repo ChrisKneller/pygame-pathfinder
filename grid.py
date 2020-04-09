@@ -238,32 +238,37 @@ while not done:
             
             # Neighbours defined as 1 square above, below, left or right
             neighbours = (
-                (min(n,current_node[0]+1),current_node[1]),
-                (max(0,current_node[0]-1),current_node[1]),
-                (current_node[0],min(n,current_node[1]+1)),
-                (current_node[0],max(0,current_node[1]-1))
-                )
+                ((min(n,current_node[0]+1),current_node[1]),"+"),
+                ((max(0,current_node[0]-1),current_node[1]),"+"),
+                ((current_node[0],min(n,current_node[1]+1)),"+"),
+                ((current_node[0],max(0,current_node[1]-1)),"+")
+            )
             
             # If we want the path to diagonal movements
+            # + represents movement up down left or right
+            # x represents diagonal movement
             if diagonals:
-                diag_neighbours = (
-                    (min(n,current_node[0]+1),min(n,current_node[1]+1)),
-                    (min(n,current_node[0]+1),max(0,current_node[1]-1)),
-                    (max(0,current_node[0]-1),min(n,current_node[1]+1)),
-                    (max(0,current_node[0]-1),max(0,current_node[1]-1))
-                )         
-                for neighbour in diag_neighbours:
-                    neighbours_loop(
-                        neighbour, 
-                        mazearr=mazearray, 
-                        visited_nodes=visited_nodes, 
-                        unvisited_nodes=unvisited_nodes, 
-                        queue=queue, 
-                        v_distances=v_distances, 
-                        current_node=current_node,
-                        current_distance=current_distance,
-                        diags=True
-                    )
+                neighbours = (
+                    ((min(n,current_node[0]+1),current_node[1]),"+"),
+                    ((max(0,current_node[0]-1),current_node[1]),"+"),
+                    ((current_node[0],min(n,current_node[1]+1)),"+"),
+                    ((current_node[0],max(0,current_node[1]-1)),"+"),
+                    ((min(n,current_node[0]+1),min(n,current_node[1]+1)),"x"),
+                    ((min(n,current_node[0]+1),max(0,current_node[1]-1)),"x"),
+                    ((max(0,current_node[0]-1),min(n,current_node[1]+1)),"x"),
+                    ((max(0,current_node[0]-1),max(0,current_node[1]-1)),"x")
+                )  
+            # for neighbour in neighbours:
+            #     neighbours_loop(
+            #         neighbour, 
+            #         mazearr=mazearray, 
+            #         visited_nodes=visited_nodes, 
+            #         unvisited_nodes=unvisited_nodes, 
+            #         queue=queue, 
+            #         v_distances=v_distances, 
+            #         current_node=current_node,
+            #         current_distance=current_distance,
+            #     )
 
             # Call to check neighbours of the current node
             for neighbour in neighbours:
@@ -323,9 +328,10 @@ while not done:
             mazearray[goal_node[0]][goal_node[1]] = "E"
         
         v_distances[goal_node] = current_distance + (1 if not diagonals else 2**0.5)
+        visited_nodes.add(goal_node)
 
         # Draw the path back from goal node to start node
-        trace_back(goal_node, start_point, v_distances, n, mazearray, diags=diagonals)
+        trace_back(goal_node, start_point, v_distances, visited_nodes, n, mazearray, diags=diagonals)
 
         end = time.perf_counter()
         num_visited = len(visited_nodes)
@@ -343,53 +349,55 @@ while not done:
 
     # loop to check all neighbours of the "current node"
     def neighbours_loop(neighbour, mazearr, visited_nodes, unvisited_nodes, queue, v_distances, current_node, current_distance, diags=False):
+        neighbour, ntype = neighbour
         if neighbour in visited_nodes:
             pass
         elif mazearr[neighbour[0]][neighbour[1]] == 'W':
             visited_nodes.add(neighbour)
             unvisited_nodes.discard(neighbour)
         else:
-            if not diags:
+            if ntype == "+":
                 queue.push(current_distance+1, neighbour)
-            else: 
+            elif ntype == "x": 
                 queue.push(current_distance+(2**0.5), neighbour)
 
     # trace a path back from the end node to the start node after the algorithm has been run
-    def trace_back(goal_node, start_node, v_distances, n, mazearray, diags=False):
+    def trace_back(goal_node, start_node, v_distances, visited_nodes, n, mazearray, diags=False):
         path = [goal_node]
         current_node = goal_node
         distance = v_distances[goal_node]
         while current_node != start_node:
+            neighbour_distances = PriorityQueue()
             if not diags:
                 neighbours = (
-                    (min(n,current_node[0]+1),current_node[1]),
-                    (max(0,current_node[0]-1),current_node[1]),
-                    (current_node[0],min(n,current_node[1]+1)),
-                    (current_node[0],max(0,current_node[1]-1))
+                    ((min(n,current_node[0]+1),current_node[1]),"+"),
+                    ((max(0,current_node[0]-1),current_node[1]),"+"),
+                    ((current_node[0],min(n,current_node[1]+1)),"+"),
+                    ((current_node[0],max(0,current_node[1]-1)),"+")
                 )
             else:
                 neighbours = (
-                    (min(n,current_node[0]+1),current_node[1]),
-                    (max(0,current_node[0]-1),current_node[1]),
-                    (current_node[0],min(n,current_node[1]+1)),
-                    (current_node[0],max(0,current_node[1]-1)),
-                    (min(n,current_node[0]+1),min(n,current_node[1]+1)),
-                    (min(n,current_node[0]+1),max(0,current_node[1]-1)),
-                    (max(0,current_node[0]-1),min(n,current_node[1]+1)),
-                    (max(0,current_node[0]-1),max(0,current_node[1]-1))
+                    ((min(n,current_node[0]+1),min(n,current_node[1]+1)),"x"),
+                    ((min(n,current_node[0]+1),max(0,current_node[1]-1)),"x"),
+                    ((max(0,current_node[0]-1),min(n,current_node[1]+1)),"x"),
+                    ((max(0,current_node[0]-1),max(0,current_node[1]-1)),"x"),
+                    ((min(n,current_node[0]+1),current_node[1]),"+"),
+                    ((max(0,current_node[0]-1),current_node[1]),"+"),
+                    ((current_node[0],min(n,current_node[1]+1)),"+"),
+                    ((current_node[0],max(0,current_node[1]-1)),"+")
                     )
             try:
                 distance = v_distances[current_node]
             except Exception as e:
                 print(e)
-            for neighbour in neighbours:
-                if neighbour == current_node:
-                    continue
-                elif neighbour in v_distances and v_distances[neighbour] <= distance - 1:
+            for neighbour, ntype in neighbours:
+                if neighbour in v_distances:
                     distance = v_distances[neighbour]
-                    mazearray[current_node[0]][current_node[1]] = "X"
-                    path.append(neighbour)
-                    current_node = neighbour
+                    neighbour_distances.push(distance, neighbour)
+            distance, smallest_neighbour = neighbour_distances.pop()
+            mazearray[smallest_neighbour[0]][smallest_neighbour[1]] = "X"
+            path.append(smallest_neighbour)
+            current_node = smallest_neighbour
 
         mazearray[start_node[0]][start_node[1]] = "X"
 
