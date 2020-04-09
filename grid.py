@@ -1,5 +1,4 @@
 import pygame
-import asyncio
 import time
 from priority_queue import PrioritySet
 
@@ -43,15 +42,16 @@ class button():
         return False
 
 # This sets the WIDTH and HEIGHT of each grid location
-WIDTH = 20
+WIDTH = 7
 HEIGHT = WIDTH # so they are squares
- 
+BUTTON_HEIGHT = 50
+
 # This sets the margin between each cell
 MARGIN = 1
 
 # Create a 2 dimensional array (a list of lists)
 grid = []
-ROWS = 40
+ROWS = 90
 for row in range(ROWS):
     # Add an empty array that will hold each cell
     grid.append([])
@@ -77,14 +77,14 @@ algorithm_run = False
 pygame.init()
  
 # Set the width and height of the screen [width, height]
-SCREEN_WIDTH = ROWS * (WIDTH + MARGIN) + MARGIN
-SCREEN_HEIGHT = SCREEN_WIDTH + 50
+SCREEN_WIDTH = ROWS * (WIDTH + MARGIN) + MARGIN * 2
+SCREEN_HEIGHT = SCREEN_WIDTH + BUTTON_HEIGHT
 WINDOW_SIZE = (SCREEN_WIDTH, SCREEN_HEIGHT)
 screen = pygame.display.set_mode(WINDOW_SIZE)
 
 # Make some buttons
-goButton = button(WALL, 0, SCREEN_WIDTH, SCREEN_WIDTH/2, 50, "Go")
-resetButton = button(WALL, SCREEN_WIDTH/2, SCREEN_WIDTH, SCREEN_WIDTH/2, 50, "Reset")
+goButton = button(WALL, 0, SCREEN_WIDTH, SCREEN_WIDTH/2, BUTTON_HEIGHT, "Go")
+resetButton = button(WALL, SCREEN_WIDTH/2, SCREEN_WIDTH, SCREEN_WIDTH/2, BUTTON_HEIGHT, "Reset")
 
 pygame.display.set_caption("Pathfinder")
  
@@ -128,7 +128,7 @@ while not done:
                         if (row,column) != START_POINT and (row,column) != END_POINT and grid[row][column] != 'W':
                             grid[row][column] = 0
                 update_gui(draw_background=False, draw_buttons=False)
-                path_found = asyncio.run(path_finder(grid, START_POINT, END_POINT))
+                path_found = path_finder(grid, START_POINT, END_POINT)
                 grid[START_POINT[0]][START_POINT[1]] = 'S'
                 algorithm_run = True
             
@@ -198,7 +198,7 @@ while not done:
 
     def update_path():
         clear_visited()
-        path_found = asyncio.run(path_finder(grid, START_POINT, END_POINT, visualise=False))
+        path_found = path_finder(grid, START_POINT, END_POINT, visualise=False)
         return path_found
 
     # Function for moving an item between two dicts
@@ -208,7 +208,9 @@ while not done:
         return from_dict, to_dict
 
     # Run Dijkstra's algorithm
-    async def path_finder(mazearray, start_point=(0,0), goal_node=False, display=pygame.display, visualise=True, diagonals=False):
+    def path_finder(mazearray, start_point=(0,0), goal_node=False, display=pygame.display, visualise=True, diagonals=False):
+
+        start = time.perf_counter()
 
         # Get the dimensions of the (square) maze
         n = len(mazearray) - 1
@@ -228,8 +230,11 @@ while not done:
         # Main algorithm loop
         while current_node != goal_node and len(unvisited_nodes) > 0:
             if current_node in visited_nodes:
-                current_distance, current_node = queue.pop()
-                continue
+                if len(queue.show()) == 0:
+                    return False
+                else:
+                    current_distance, current_node = queue.pop()
+                    continue
             
             # Neighbours defined as 1 square above, below, left or right
             neighbours = (
@@ -239,6 +244,7 @@ while not done:
                 (current_node[0],max(0,current_node[1]-1))
                 )
             
+            # If we want the path to diagonal movements
             if diagonals:
                 diag_neighbours = (
                     (min(n,current_node[0]+1),min(n,current_node[1]+1)),
@@ -246,7 +252,22 @@ while not done:
                     (max(0,current_node[0]-1),min(n,current_node[1]+1)),
                     (max(0,current_node[0]-1),max(0,current_node[1]-1))
                 )         
-                await asyncio.gather(*(neighbours_loop(
+                for neighbour in diag_neighbours:
+                    neighbours_loop(
+                        neighbour, 
+                        mazearr=mazearray, 
+                        visited_nodes=visited_nodes, 
+                        unvisited_nodes=unvisited_nodes, 
+                        queue=queue, 
+                        v_distances=v_distances, 
+                        current_node=current_node,
+                        current_distance=current_distance,
+                        diags=True
+                    )
+
+            # Call to check neighbours of the current node
+            for neighbour in neighbours:
+                neighbours_loop(
                     neighbour, 
                     mazearr=mazearray, 
                     visited_nodes=visited_nodes, 
@@ -254,21 +275,8 @@ while not done:
                     queue=queue, 
                     v_distances=v_distances, 
                     current_node=current_node,
-                    current_distance=current_distance,
-                    diags=True
-                    ) for neighbour in diag_neighbours))
-
-            # Asynchronous call to check neighbours of the current node
-            await asyncio.gather(*(neighbours_loop(
-                neighbour, 
-                mazearr=mazearray, 
-                visited_nodes=visited_nodes, 
-                unvisited_nodes=unvisited_nodes, 
-                queue=queue, 
-                v_distances=v_distances, 
-                current_node=current_node,
-                current_distance=current_distance
-                ) for neighbour in neighbours))
+                    current_distance=current_distance
+                )
 
 
             # When we have checked the current node, add and remove appropriately
@@ -294,8 +302,13 @@ while not done:
                 # If we want to visualise it (rather than run instantly)
                 # then we update the grid with each loop
                 if visualise:
-                    pygame.display.update()
-                    time.sleep(0.01)
+                    pygame.display.update(
+                        (MARGIN + WIDTH) * current_node[1] + MARGIN,
+                        (MARGIN + HEIGHT) * current_node[0] + MARGIN,
+                        WIDTH,
+                        HEIGHT
+                    )
+                    time.sleep(0.0000001)
             
             # Try here in case distances dict is empty
             if len(queue.show()) == 0:
@@ -309,18 +322,27 @@ while not done:
         if current_node == goal_node:
             mazearray[goal_node[0]][goal_node[1]] = "E"
         
-        v_distances[goal_node] = current_distance
+        v_distances[goal_node] = current_distance + (1 if not diagonals else 2**0.5)
 
         # Draw the path back from goal node to start node
         trace_back(goal_node, start_point, v_distances, n, mazearray)
 
+        end = time.perf_counter()
+        num_visited = len(visited_nodes)
+        time_taken = end-start
+
+        # After the visualisation has run, drag the end point around
+        # You will see that the program runs in linear time, as the 
+        # time taken scales linearly with the number of nodes checked
+        print(f"Program finished in {time_taken:.4f} seconds after checking {num_visited} nodes. That is {time_taken/num_visited:.8f} seconds per node.")
+        
         # The commented out line returns the distance to the end node
         # return False if v_distances[goal_node] == float('inf') else v_distances[goal_node]
         return False if v_distances[goal_node] == float('inf') else True
 
 
-    # asyncronous loop to check all neighbours of the "current node"
-    async def neighbours_loop(neighbour, mazearr, visited_nodes, unvisited_nodes, queue, v_distances, current_node, current_distance, diags=False):
+    # loop to check all neighbours of the "current node"
+    def neighbours_loop(neighbour, mazearr, visited_nodes, unvisited_nodes, queue, v_distances, current_node, current_distance, diags=False):
         if neighbour in visited_nodes:
             pass
         elif mazearr[neighbour[0]][neighbour[1]] == 'W':
@@ -405,7 +427,7 @@ while not done:
                         HEIGHT
                         ]
                         )
- 
+
     # --- Drawing code should go here
     update_gui()
 
