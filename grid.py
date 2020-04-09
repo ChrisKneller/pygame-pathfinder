@@ -363,11 +363,20 @@ while not done:
 
     # trace a path back from the end node to the start node after the algorithm has been run
     def trace_back(goal_node, start_node, v_distances, visited_nodes, n, mazearray, diags=False):
+        
+        # begin the list of nodes which will represent the path back, starting with the end node
         path = [goal_node]
+        
         current_node = goal_node
-        distance = v_distances[goal_node]
+        
+        # Set the loop in motion until we get back to the start
         while current_node != start_node:
+            # Start an empty priority queue for the current node to check all neighbours
             neighbour_distances = PriorityQueue()
+            
+            # This is just to differentiate between whether the algorithm can
+            # take diagonal steps or not. "+" and "x" are meant to be visual
+            # representations of "not diagonal" and "diagonal" nodes
             if not diags:
                 neighbours = (
                     ((min(n,current_node[0]+1),current_node[1]),"+"),
@@ -386,14 +395,21 @@ while not done:
                     ((current_node[0],min(n,current_node[1]+1)),"+"),
                     ((current_node[0],max(0,current_node[1]-1)),"+")
                     )
+            
+            # Had some errors during testing, not sure if this is still necessary
             try:
                 distance = v_distances[current_node]
             except Exception as e:
                 print(e)
+            
+            # For each neighbour of the current node, add its location and distance
+            # to a priority queue
             for neighbour, ntype in neighbours:
                 if neighbour in v_distances:
                     distance = v_distances[neighbour]
                     neighbour_distances.push(distance, neighbour)
+            
+            # Pop the lowest value off; that is the next node in our path
             distance, smallest_neighbour = neighbour_distances.pop()
             mazearray[smallest_neighbour[0]][smallest_neighbour[1]] = "X"
             path.append(smallest_neighbour)
