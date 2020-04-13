@@ -2,6 +2,7 @@ import pygame
 import time
 from priority_queue import PrioritySet, PriorityQueue
 from math import inf
+import random
 
 # Define some colors
 BLACK = (0, 0, 0)
@@ -65,8 +66,9 @@ class Node():
         self.distance_modifier = dmf[self.nodetype]
         self.color = self.pcolor if self.is_path else self.vcolor if self.is_visited else self.rcolor
 
-    def update(self, nodetype=False, is_visited='unchanged', is_path='unchanged', colors=colors, dmf=distance_modifiers):
+    def update(self, nodetype=False, is_visited='unchanged', is_path='unchanged', colors=colors, dmf=distance_modifiers, nodetypes=nodetypes):
         if nodetype:
+            assert nodetype in nodetypes, f"nodetype must be one of: {nodetypes}"
             self.nodetype = nodetype        
 
         if is_visited != 'unchanged':
@@ -84,7 +86,7 @@ class Node():
         self.color = self.pcolor if self.is_path else self.vcolor if self.is_visited else self.rcolor
 
 # This sets the WIDTH and HEIGHT of each grid location
-WIDTH = 20
+WIDTH = 7
 HEIGHT = WIDTH # so they are squares
 BUTTON_HEIGHT = 50
 
@@ -93,19 +95,22 @@ MARGIN = 1
 
 # Create a 2 dimensional array (a list of lists)
 grid = []
-ROWS = 30
+ROWS = 90
+# Iterate through every row and column, adding blank nodes
 for row in range(ROWS):
-    # Add an empty array that will hold each cell
     grid.append([])
     for column in range(ROWS):
-        grid[row].append(Node('blank'))  # Append a blank node
+        grid[row].append(Node('blank')) 
 
 # Set start and end points for the pathfinder
-START_POINT=(1,1)
-END_POINT=(ROWS-2,ROWS-2)
+# START_POINT=(1,1)
+START_POINT = (random.randint(0,ROWS-1),random.randint(0,ROWS-1))
+END_POINT = (random.randint(0,ROWS-1),random.randint(0,ROWS-1))
 
 grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
 grid[END_POINT[0]][END_POINT[1]].update(nodetype='end')
+
+DIAGONALS = False
 
 # Used for handling click & drag
 mouse_drag = False
@@ -190,7 +195,7 @@ while not done:
                 clear_visited()
                 update_gui(draw_background=False, draw_buttons=False)
                 pygame.display.flip()
-                path_found = path_finder(grid, START_POINT, END_POINT)
+                path_found = dijkstra(grid, START_POINT, END_POINT, diagonals=False)
                 grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
                 algorithm_run = True
             
@@ -202,6 +207,7 @@ while not done:
                     for column in range(ROWS):
                         if (row,column) != START_POINT and (row,column) != END_POINT:
                             grid[row][column].update(nodetype='blank', is_visited=False, is_path=False)
+                grid = prim(start_point=START_POINT)
         
         elif event.type == pygame.MOUSEBUTTONUP:
             # Turn off all mouse drags if mouse Button released
@@ -273,7 +279,7 @@ while not done:
 
     def update_path():
         clear_visited()
-        path_found = path_finder(grid, START_POINT, END_POINT, visualise=False)
+        path_found = dijkstra(grid, START_POINT, END_POINT, visualise=False)
         return path_found
 
     # Function for moving an item between two dicts
@@ -282,10 +288,125 @@ while not done:
         from_dict.pop(item)
         return from_dict, to_dict
 
-    # Run Dijkstra's algorithm
-    def path_finder(mazearray, start_point=(0,0), goal_node=False, display=pygame.display, visualise=True, diagonals=True):
+    # + represents non-diagonal neighbours, x diagonal neighbours
+    def get_neighbours(node, max_dimension, diagonals=DIAGONALS):
+        if not diagonals:
+            neighbours = (
+                ((min(max_dimension,node[0]+1),node[1]),"+"),
+                ((max(0,node[0]-1),node[1]),"+"),
+                ((node[0],min(max_dimension,node[1]+1)),"+"),
+                ((node[0],max(0,node[1]-1)),"+")
+            )
+        else:
+            neighbours = (
+                ((min(max_dimension,node[0]+1),node[1]),"+"),
+                ((max(0,node[0]-1),node[1]),"+"),
+                ((node[0],min(max_dimension,node[1]+1)),"+"),
+                ((node[0],max(0,node[1]-1)),"+"),
+                ((min(max_dimension,node[0]+1),min(max_dimension,node[1]+1)),"x"),
+                ((min(max_dimension,node[0]+1),max(0,node[1]-1)),"x"),
+                ((max(0,node[0]-1),min(max_dimension,node[1]+1)),"x"),
+                ((max(0,node[0]-1),max(0,node[1]-1)),"x")
+            )
+        for neighbour in neighbours:
+            if neighbour == node:
+                neighbours.remove(neighbour)
 
-        start = time.perf_counter()
+        return neighbours
+
+    # randomized Prim's algorithm for creating random mazes
+    def prim(mazearray=False, start_point=False):
+
+        # If a maze isn't input, we just create a grid full of walls
+        if not mazearray:
+            mazearray = []
+            for row in range(ROWS):
+                mazearray.append([])
+                for column in range(ROWS):
+                    mazearray[row].append(Node('wall'))
+                    # Pygame part
+                    pygame.draw.rect(
+                        screen,
+                        mazearray[row][column].rcolor,
+                        [
+                        (MARGIN + WIDTH) * row + MARGIN,
+                        (MARGIN + HEIGHT) * column + MARGIN,
+                        WIDTH,
+                        HEIGHT
+                        ]
+                    )
+
+        n = len(mazearray) - 1
+
+        if not start_point:
+            start_point = (random.randint(0,n),random.randint(0,n))
+            START_POINT = start_point
+        
+        mazearray[start_point[0]][start_point[1]].update(nodetype='start')
+        
+        # Pygame part
+        pygame.draw.rect(
+            screen,
+            mazearray[start_point[0]][start_point[1]].rcolor,
+            [
+            (MARGIN + WIDTH) * start_point[1] + MARGIN,
+            (MARGIN + HEIGHT) * start_point[0] + MARGIN,
+            WIDTH,
+            HEIGHT
+            ]
+        )
+
+        walls = set([])
+
+        pygame.display.flip()
+
+        neighbours = get_neighbours(start_point, n)
+
+        for neighbour, ntype in neighbours:
+            if mazearray[neighbour[0]][neighbour[1]].nodetype == 'wall':
+                walls.add(neighbour)
+
+        while len(walls) > 0:
+            wall = random.choice(tuple(walls))
+            wall_neighbours = get_neighbours(wall, n)
+            neighbouring_walls = set([])
+            count = 0
+            for wall_neighbour, ntype in wall_neighbours:
+                if wall_neighbour == (start_point or END_POINT):
+                    continue
+                if mazearray[wall_neighbour[0]][wall_neighbour[1]].nodetype != 'wall':
+                    count += 1
+                else:
+                    neighbouring_walls.add(wall_neighbour)
+                
+            if count <= 1:
+                mazearray[wall[0]][wall[1]].update(nodetype='blank')
+                pygame.draw.rect(
+                    screen,
+                    mazearray[wall[0]][wall[1]].rcolor,
+                    [
+                    (MARGIN + WIDTH) * wall[1] + MARGIN,
+                    (MARGIN + HEIGHT) * wall[0] + MARGIN,
+                    WIDTH,
+                    HEIGHT
+                    ]
+                )
+                pygame.display.update(
+                    (MARGIN + WIDTH) * wall[1] + MARGIN,
+                    (MARGIN + HEIGHT) * wall[0] + MARGIN,
+                    WIDTH,
+                    HEIGHT
+                )
+                time.sleep(0.01)
+                walls.update(neighbouring_walls)
+            walls.remove(wall)            
+
+        mazearray[END_POINT[0]][END_POINT[1]].update(nodetype='end')
+
+        return mazearray
+
+    # Run Dijkstra's algorithm
+    def dijkstra(mazearray, start_point=(0,0), goal_node=False, display=pygame.display, visualise=True, diagonals=DIAGONALS):
 
         # Get the dimensions of the (square) maze
         n = len(mazearray) - 1
@@ -312,29 +433,8 @@ while not done:
                     current_distance, current_node = queue.pop()
                     continue
             
-            # Neighbours defined as 1 square above, below, left or right
-            neighbours = (
-                ((min(n,current_node[0]+1),current_node[1]),"+"),
-                ((max(0,current_node[0]-1),current_node[1]),"+"),
-                ((current_node[0],min(n,current_node[1]+1)),"+"),
-                ((current_node[0],max(0,current_node[1]-1)),"+")
-            )
-            
-            # If we want the path to do diagonal movements
-            # + represents movement up down left or right
-            # x represents diagonal movement
-            if diagonals:
-                neighbours = (
-                    ((min(n,current_node[0]+1),current_node[1]),"+"),
-                    ((max(0,current_node[0]-1),current_node[1]),"+"),
-                    ((current_node[0],min(n,current_node[1]+1)),"+"),
-                    ((current_node[0],max(0,current_node[1]-1)),"+"),
-                    ((min(n,current_node[0]+1),min(n,current_node[1]+1)),"x"),
-                    ((min(n,current_node[0]+1),max(0,current_node[1]-1)),"x"),
-                    ((max(0,current_node[0]-1),min(n,current_node[1]+1)),"x"),
-                    ((max(0,current_node[0]-1),max(0,current_node[1]-1)),"x")
-                )  
-
+            neighbours = get_neighbours(current_node, n, diagonals=diagonals)
+        
             # Call to check neighbours of the current node
             for neighbour in neighbours:
                 neighbours_loop(
@@ -377,7 +477,7 @@ while not done:
                         WIDTH,
                         HEIGHT
                     )
-                    time.sleep(0.0000001)
+                    time.sleep(0.0001)
             
             # If there are no nodes in the queue then we return False (no path)
             if len(queue.show()) == 0:
@@ -412,7 +512,7 @@ while not done:
 
 
     # loop to check all neighbours of the "current node"
-    def neighbours_loop(neighbour, mazearr, visited_nodes, unvisited_nodes, queue, v_distances, current_node, current_distance, diags=False):
+    def neighbours_loop(neighbour, mazearr, visited_nodes, unvisited_nodes, queue, v_distances, current_node, current_distance, diags=DIAGONALS):
         neighbour, ntype = neighbour
         # If the neighbour has already been visited 
         if neighbour in visited_nodes:
@@ -440,28 +540,8 @@ while not done:
             # Start an empty priority queue for the current node to check all neighbours
             neighbour_distances = PriorityQueue()
             
-            # This is just to differentiate between whether the algorithm can
-            # take diagonal steps or not. "+" and "x" are meant to be visual
-            # representations of "not diagonal" and "diagonal" nodes
-            if not diags:
-                neighbours = (
-                    ((min(n,current_node[0]+1),current_node[1]),"+"),
-                    ((max(0,current_node[0]-1),current_node[1]),"+"),
-                    ((current_node[0],min(n,current_node[1]+1)),"+"),
-                    ((current_node[0],max(0,current_node[1]-1)),"+")
-                )
-            else:
-                neighbours = (
-                    ((min(n,current_node[0]+1),min(n,current_node[1]+1)),"x"),
-                    ((min(n,current_node[0]+1),max(0,current_node[1]-1)),"x"),
-                    ((max(0,current_node[0]-1),min(n,current_node[1]+1)),"x"),
-                    ((max(0,current_node[0]-1),max(0,current_node[1]-1)),"x"),
-                    ((min(n,current_node[0]+1),current_node[1]),"+"),
-                    ((max(0,current_node[0]-1),current_node[1]),"+"),
-                    ((current_node[0],min(n,current_node[1]+1)),"+"),
-                    ((current_node[0],max(0,current_node[1]-1)),"+")
-                    )
-            
+            neighbours = get_neighbours(current_node, n, diags)
+
             # Had some errors during testing, not sure if this is still necessary
             try:
                 distance = v_distances[current_node]
