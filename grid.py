@@ -10,6 +10,8 @@ WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
+ORANGE = (255, 128, 0)
+PURPLE = (128, 0, 255)
 GREY = (143, 143, 143)
 BROWN = (186, 127, 50)
 DARK_GREEN = (0, 128, 0)
@@ -50,9 +52,9 @@ class Node():
 
     nodetypes = ['blank', 'start', 'end', 'wall', 'mud']
 
-    colors = {  'regular': {'blank': WHITE, 'start': BLUE, 'end': BLUE, 'wall': GREY, 'mud': BROWN },
-                'visited': {'blank': GREEN, 'start': BLUE, 'end': BLUE, 'wall': GREY, 'mud': DARK_GREEN},
-                'path': {'blank': BLUE, 'start': BLUE, 'end': BLUE, 'wall': GREY, 'mud': DARK_BLUE}}
+    colors = {  'regular': {'blank': WHITE, 'start': RED, 'end': PURPLE, 'wall': GREY, 'mud': BROWN },
+                'visited': {'blank': GREEN, 'start': RED, 'end': PURPLE, 'wall': GREY, 'mud': DARK_GREEN},
+                'path': {'blank': BLUE, 'start': RED, 'end': PURPLE, 'wall': GREY, 'mud': DARK_BLUE}}
 
     distance_modifiers = {'blank': 1, 'start': 1, 'end': 1, 'wall': inf, 'mud': 3}
 
