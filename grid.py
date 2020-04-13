@@ -128,13 +128,15 @@ FONT = pygame.font.SysFont('arial', 8)
 
 # Set the width and height of the screen [width, height]
 SCREEN_WIDTH = ROWS * (WIDTH + MARGIN) + MARGIN * 2
-SCREEN_HEIGHT = SCREEN_WIDTH + BUTTON_HEIGHT
+SCREEN_HEIGHT = SCREEN_WIDTH + BUTTON_HEIGHT * 2
 WINDOW_SIZE = (SCREEN_WIDTH, SCREEN_HEIGHT)
 screen = pygame.display.set_mode(WINDOW_SIZE)
 
 # Make some Buttons
-goButton = Button(GREY, 0, SCREEN_WIDTH, SCREEN_WIDTH/2, BUTTON_HEIGHT, "Go")
-resetButton = Button(GREY, SCREEN_WIDTH/2, SCREEN_WIDTH, SCREEN_WIDTH/2, BUTTON_HEIGHT, "Reset")
+goButton = Button(GREY, 0, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Go")
+resetButton = Button(GREY, SCREEN_WIDTH/3, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Reset")
+mazeButton = Button(GREY, (SCREEN_WIDTH/3)*2, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Random Maze")
+vizmazeButton = Button(GREY, (SCREEN_WIDTH/3)*2, SCREEN_WIDTH + BUTTON_HEIGHT, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Random Maze (viz)")
 
 pygame.display.set_caption("Pathfinder")
  
@@ -195,7 +197,7 @@ while not done:
                 clear_visited()
                 update_gui(draw_background=False, draw_buttons=False)
                 pygame.display.flip()
-                path_found = dijkstra(grid, START_POINT, END_POINT, diagonals=False)
+                path_found = dijkstra(grid, START_POINT, END_POINT)
                 grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
                 algorithm_run = True
             
@@ -207,7 +209,27 @@ while not done:
                     for column in range(ROWS):
                         if (row,column) != START_POINT and (row,column) != END_POINT:
                             grid[row][column].update(nodetype='blank', is_visited=False, is_path=False)
-                grid = prim(start_point=START_POINT)
+
+            # When the Random Maze Button is clicked
+            elif mazeButton.isOver(pos):
+                path_found = False
+                algorithm_run = False
+                for row in range(ROWS):
+                    for column in range(ROWS):
+                        if (row,column) != START_POINT and (row,column) != END_POINT:
+                            grid[row][column].update(nodetype='blank', is_visited=False, is_path=False)
+                grid = prim(start_point=START_POINT, visualise=False)
+
+            # When the Random Maze (Viz) Button is clicked
+            elif vizmazeButton.isOver(pos):
+                path_found = False
+                algorithm_run = False
+                for row in range(ROWS):
+                    for column in range(ROWS):
+                        if (row,column) != START_POINT and (row,column) != END_POINT:
+                            grid[row][column].update(nodetype='blank', is_visited=False, is_path=False)
+                grid = prim(start_point=START_POINT, visualise=True)
+        
         
         elif event.type == pygame.MOUSEBUTTONUP:
             # Turn off all mouse drags if mouse Button released
@@ -314,8 +336,28 @@ while not done:
 
         return neighbours
 
+    def draw_square(row,column,grid=grid):
+        pygame.draw.rect(
+            screen,
+            grid[row][column].color,
+            [
+                (MARGIN + HEIGHT) * column + MARGIN,
+                (MARGIN + HEIGHT) * row + MARGIN,
+                WIDTH,
+                HEIGHT
+            ]
+        )
+
+    def update_square(row,column):
+        pygame.display.update(
+            (MARGIN + WIDTH) * column + MARGIN,
+            (MARGIN + HEIGHT) * row + MARGIN,
+            WIDTH,
+            HEIGHT
+        )
+
     # randomized Prim's algorithm for creating random mazes
-    def prim(mazearray=False, start_point=False):
+    def prim(mazearray=False, start_point=False, visualise=True):
 
         # If a maze isn't input, we just create a grid full of walls
         if not mazearray:
@@ -324,17 +366,8 @@ while not done:
                 mazearray.append([])
                 for column in range(ROWS):
                     mazearray[row].append(Node('wall'))
-                    # Pygame part
-                    pygame.draw.rect(
-                        screen,
-                        mazearray[row][column].rcolor,
-                        [
-                        (MARGIN + WIDTH) * row + MARGIN,
-                        (MARGIN + HEIGHT) * column + MARGIN,
-                        WIDTH,
-                        HEIGHT
-                        ]
-                    )
+                    if visualise:
+                        draw_square(row,column,grid=mazearray)
 
         n = len(mazearray) - 1
 
@@ -344,21 +377,11 @@ while not done:
         
         mazearray[start_point[0]][start_point[1]].update(nodetype='start')
         
-        # Pygame part
-        pygame.draw.rect(
-            screen,
-            mazearray[start_point[0]][start_point[1]].rcolor,
-            [
-            (MARGIN + WIDTH) * start_point[1] + MARGIN,
-            (MARGIN + HEIGHT) * start_point[0] + MARGIN,
-            WIDTH,
-            HEIGHT
-            ]
-        )
+        if visualise:
+            draw_square(start_point[0], start_point[1], grid=mazearray)
+            pygame.display.flip()
 
         walls = set([])
-
-        pygame.display.flip()
 
         neighbours = get_neighbours(start_point, n)
 
@@ -374,31 +397,21 @@ while not done:
             for wall_neighbour, ntype in wall_neighbours:
                 if wall_neighbour == (start_point or END_POINT):
                     continue
-                if mazearray[wall_neighbour[0]][wall_neighbour[1]].nodetype != 'wall':
+                elif mazearray[wall_neighbour[0]][wall_neighbour[1]].nodetype != 'wall':
                     count += 1
                 else:
                     neighbouring_walls.add(wall_neighbour)
                 
             if count <= 1:
                 mazearray[wall[0]][wall[1]].update(nodetype='blank')
-                pygame.draw.rect(
-                    screen,
-                    mazearray[wall[0]][wall[1]].rcolor,
-                    [
-                    (MARGIN + WIDTH) * wall[1] + MARGIN,
-                    (MARGIN + HEIGHT) * wall[0] + MARGIN,
-                    WIDTH,
-                    HEIGHT
-                    ]
-                )
-                pygame.display.update(
-                    (MARGIN + WIDTH) * wall[1] + MARGIN,
-                    (MARGIN + HEIGHT) * wall[0] + MARGIN,
-                    WIDTH,
-                    HEIGHT
-                )
-                time.sleep(0.01)
+
+                if visualise:
+                    draw_square(wall[0],wall[1],mazearray)
+                    update_square(wall[0],wall[1])
+                    time.sleep(0.001)
+                
                 walls.update(neighbouring_walls)
+            
             walls.remove(wall)            
 
         mazearray[END_POINT[0]][END_POINT[1]].update(nodetype='end')
@@ -458,25 +471,12 @@ while not done:
             # Pygame part: visited nodes mark visited nodes as green
             if (current_node[0],current_node[1]) != start_point:
                 mazearray[current_node[0]][current_node[1]].update(is_visited = True)
-                pygame.draw.rect(
-                    screen,
-                    mazearray[current_node[0]][current_node[1]].vcolor,
-                    [
-                    (MARGIN + WIDTH) * current_node[1] + MARGIN,
-                    (MARGIN + HEIGHT) * current_node[0] + MARGIN,
-                    WIDTH,
-                    HEIGHT
-                    ]
-                )
+                draw_square(current_node[0],current_node[1],grid=mazearray)
+
                 # If we want to visualise it (rather than run instantly)
                 # then we update the grid with each loop
                 if visualise:
-                    pygame.display.update(
-                        (MARGIN + WIDTH) * current_node[1] + MARGIN,
-                        (MARGIN + HEIGHT) * current_node[0] + MARGIN,
-                        WIDTH,
-                        HEIGHT
-                    )
+                    update_square(current_node[0],current_node[1])
                     time.sleep(0.0001)
             
             # If there are no nodes in the queue then we return False (no path)
@@ -575,22 +575,15 @@ while not done:
             # Draw Button below grid
             goButton.draw(screen, (0,0,0))
             resetButton.draw(screen, (0,0,0))
+            mazeButton.draw(screen, (0,0,0))
+            vizmazeButton.draw(screen, (0,0,0))
 
         if draw_grid:
             # Draw the grid
             for row in range(ROWS):
                 for column in range(ROWS):
                     color = grid[row][column].color
-                    pygame.draw.rect(
-                        screen,
-                        color,
-                        [
-                        (MARGIN + WIDTH) * column + MARGIN,
-                        (MARGIN + HEIGHT) * row + MARGIN,
-                        WIDTH,
-                        HEIGHT
-                        ]
-                        )
+                    draw_square(row,column)
 
     # --- Drawing code should go here
     update_gui()
