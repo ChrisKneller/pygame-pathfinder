@@ -10,8 +10,10 @@ WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
+LIGHT_BLUE = (0, 111, 255)
 ORANGE = (255, 128, 0)
 PURPLE = (128, 0, 255)
+YELLOW = (255, 255, 0)
 GREY = (143, 143, 143)
 BROWN = (186, 127, 50)
 DARK_GREEN = (0, 128, 0)
@@ -30,9 +32,9 @@ class Button():
     def draw(self,win,outline=None):
         # Call this method to draw the Button on the screen
         if outline:
-            pygame.draw.rect(win, outline, (self.x-2,self.y-2,self.width+4,self.height+4),0)
+            pygame.draw.rect(win, outline, (self.x,self.y,self.width,self.height),0)
             
-        pygame.draw.rect(win, self.color, (self.x,self.y,self.width,self.height),0)
+        pygame.draw.rect(win, self.color, (self.x+1,self.y+1,self.width-1,self.height-1),0)
         
         if self.text != '':
             font = pygame.font.SysFont('arial', 20)
@@ -52,9 +54,9 @@ class Node():
 
     nodetypes = ['blank', 'start', 'end', 'wall', 'mud']
 
-    colors = {  'regular': {'blank': WHITE, 'start': RED, 'end': PURPLE, 'wall': BLACK, 'mud': BROWN },
-                'visited': {'blank': GREEN, 'start': RED, 'end': PURPLE, 'wall': BLACK, 'mud': DARK_GREEN},
-                'path': {'blank': BLUE, 'start': RED, 'end': PURPLE, 'wall': BLACK, 'mud': DARK_BLUE}}
+    colors = {  'regular': {'blank': WHITE, 'start': RED, 'end': LIGHT_BLUE, 'wall': BLACK, 'mud': BROWN },
+                'visited': {'blank': GREEN, 'start': RED, 'end': LIGHT_BLUE, 'wall': BLACK, 'mud': DARK_GREEN},
+                'path': {'blank': BLUE, 'start': RED, 'end': LIGHT_BLUE, 'wall': BLACK, 'mud': DARK_BLUE}}
 
     distance_modifiers = {'blank': 1, 'start': 1, 'end': 1, 'wall': inf, 'mud': 3}
 
@@ -97,7 +99,7 @@ MARGIN = 0
 
 # Create a 2 dimensional array (a list of lists)
 grid = []
-ROWS = 90
+ROWS = 99
 # Iterate through every row and column, adding blank nodes
 for row in range(ROWS):
     grid.append([])
@@ -105,8 +107,6 @@ for row in range(ROWS):
         grid[row].append(Node('blank')) 
 
 # Set start and end points for the pathfinder
-# START_POINT=(1,1)
-
 START_POINT = (random.randrange(2,ROWS-1,2)-1,random.randrange(2,ROWS-1,2)-1)
 END_POINT = (random.randrange(2,ROWS-1,2)-1,random.randrange(2,ROWS-1,2)-1)
 
@@ -131,16 +131,17 @@ FONT = pygame.font.SysFont('arial', 8)
 
 # Set the width and height of the screen [width, height]
 SCREEN_WIDTH = ROWS * (WIDTH + MARGIN) + MARGIN * 2
-SCREEN_HEIGHT = SCREEN_WIDTH + BUTTON_HEIGHT * 2
+SCREEN_HEIGHT = SCREEN_WIDTH + BUTTON_HEIGHT * 3
 WINDOW_SIZE = (SCREEN_WIDTH, SCREEN_HEIGHT)
 screen = pygame.display.set_mode(WINDOW_SIZE)
 
 # Make some Buttons
 dijkstraButton = Button(GREY, 0, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Dijkstra")
-dfsButton = Button(GREY, 0, SCREEN_WIDTH + BUTTON_HEIGHT + 2, SCREEN_WIDTH/3, BUTTON_HEIGHT, "DFS")
+dfsButton = Button(GREY, 0, SCREEN_WIDTH + BUTTON_HEIGHT, SCREEN_WIDTH/3, BUTTON_HEIGHT, "DFS")
+astarButton = Button(GREY, 0, SCREEN_WIDTH + BUTTON_HEIGHT*2, SCREEN_WIDTH/3, BUTTON_HEIGHT, "A*")
 resetButton = Button(GREY, SCREEN_WIDTH/3, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT*2, "Reset")
 mazeButton = Button(GREY, (SCREEN_WIDTH/3)*2, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Random Maze")
-vizmazeButton = Button(GREY, (SCREEN_WIDTH/3)*2, SCREEN_WIDTH + BUTTON_HEIGHT + 2, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Random Maze (viz)")
+vizmazeButton = Button(GREY, (SCREEN_WIDTH/3)*2, SCREEN_WIDTH + BUTTON_HEIGHT, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Random Maze (viz)")
 
 pygame.display.set_caption("Pathfinder")
  
@@ -213,6 +214,15 @@ while not done:
                 path_found = dfs(grid, START_POINT, END_POINT)
                 grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
                 algorithm_run = True
+            
+            # When the dijkstra Button is clicked
+            elif astarButton.isOver(pos):
+                clear_visited()
+                update_gui(draw_background=False, draw_buttons=False)
+                pygame.display.flip()
+                path_found = astar(grid, START_POINT, END_POINT)
+                grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
+                algorithm_run = True
 
             # When the Reset Button is clicked
             elif resetButton.isOver(pos):
@@ -281,12 +291,12 @@ while not done:
             # Move the start point
             elif drag_start_point == True:
                 if grid[row][column].nodetype == "blank":
-                    grid[START_POINT[0]][START_POINT[1]].update(nodetype='blank')
+                    grid[START_POINT[0]][START_POINT[1]].update(nodetype='blank', is_path=False, is_visited=False)
                     START_POINT = (row,column)
                     # If we have already run the algorithm, update it as the point is moved
                     if algorithm_run:
                         path_found = update_path()
-                    grid[START_POINT[0]][START_POINT[1]].update(nodetype='start', is_path=False, is_visited=False) 
+                    grid[START_POINT[0]][START_POINT[1]].update(nodetype='start') 
             
             # Move the end point
             elif drag_end_point == True:
@@ -345,6 +355,7 @@ while not done:
                 ((max(0,node[0]-1),max(0,node[1]-1)),"x")
             )
 
+        # return neighbours
         return (neighbour for neighbour in neighbours if neighbour[0] != node)
 
     # For Pygame: this draws a square in the given location (for when properties updated)
@@ -359,6 +370,7 @@ while not done:
                 HEIGHT
             ]
         )
+        pygame.event.pump()
 
     # For Pygame: this updates the screen for the given square
     def update_square(row,column):
@@ -368,6 +380,7 @@ while not done:
             WIDTH,
             HEIGHT
         )
+        pygame.event.pump()
 
     # randomized Prim's algorithm for creating random mazes
     def prim(mazearray=False, start_point=False, visualise=True):
@@ -524,10 +537,102 @@ while not done:
         # return False if v_distances[goal_node] == float('inf') else v_distances[goal_node]
         return False if v_distances[goal_node] == float('inf') else True
 
+    # A* pathfinding algorithm
+    def astar(mazearray, start_point=(0,0), goal_node=False, display=pygame.display, visualise=True, diagonals=DIAGONALS):
 
-    # (DIJKSTRA) loop to check all neighbours of the "current node"
-    def neighbours_loop(neighbour, mazearr, visited_nodes, unvisited_nodes, queue, v_distances, current_node, current_distance, diags=DIAGONALS):
+        # Get the dimensions of the (square) maze
+        n = len(mazearray) - 1
+        
+        # Create the various data structures with speed in mind
+        visited_nodes = set()
+        unvisited_nodes = set([(x,y) for x in range(n+1) for y in range(n+1)])
+        queue = PriorityQueue()
+        queue.push(0, start_point)
+        v_distances = {}
+
+        # If a goal_node is not set, put it in the bottom right (1 square away from either edge)
+        if not goal_node:
+            goal_node = (n,n)
+        current_distance, current_node = queue.pop()
+        start = time.perf_counter()
+        
+        # Main algorithm loop
+        while current_node != goal_node and len(unvisited_nodes) > 0:
+            if current_node in visited_nodes:
+                if len(queue.show()) == 0:
+                    return False
+                else:
+                    current_distance, current_node = queue.pop()
+                    continue
+            
+            # Call to check neighbours of the current node
+            for neighbour in get_neighbours(current_node, n, diagonals=diagonals):
+                neighbours_loop(
+                    neighbour, 
+                    mazearr=mazearray, 
+                    visited_nodes=visited_nodes, 
+                    unvisited_nodes=unvisited_nodes, 
+                    queue=queue, 
+                    v_distances=v_distances, 
+                    current_node=current_node,
+                    current_distance=current_distance,
+                    astar=True
+                )
+
+            # When we have checked the current node, add and remove appropriately
+            visited_nodes.add(current_node)
+            unvisited_nodes.discard(current_node)
+            
+            # Add the distance to the visited distances dictionary (used for traceback)
+            v_distances[current_node] = current_distance
+            
+            # Pygame part: visited nodes mark visited nodes as green
+            if (current_node[0],current_node[1]) != start_point:
+                mazearray[current_node[0]][current_node[1]].update(is_visited = True)
+                draw_square(current_node[0],current_node[1],grid=mazearray)
+
+                # If we want to visualise it (rather than run instantly)
+                # then we update the grid with each loop
+                if visualise:
+                    update_square(current_node[0],current_node[1])
+                    time.sleep(0.000001)
+            
+            # If there are no nodes in the queue then we return False (no path)
+            if len(queue.show()) == 0:
+                return False
+            # Otherwise we take the minimum distance as the new current node
+            else:
+                current_distance, current_node = queue.pop()
+        
+        # TODO: update this line so it works properly
+        v_distances[goal_node] = current_distance + (1 if not diagonals else 2**0.5)
+        visited_nodes.add(goal_node)
+
+        # Draw the path back from goal node to start node
+        trace_back(goal_node, start_point, v_distances, visited_nodes, n, mazearray, diags=diagonals)
+
+        end = time.perf_counter()
+        num_visited = len(visited_nodes)
+        time_taken = end-start
+
+        # Print timings
+        print(f"Program finished in {time_taken:.4f} seconds after checking {num_visited} nodes. That is {time_taken/num_visited:.8f} seconds per node.")
+        
+        # The commented out line returns the distance to the end node
+        # return False if v_distances[goal_node] == float('inf') else v_distances[goal_node]
+        return False if v_distances[goal_node] == float('inf') else True
+
+
+    # (DIJKSTRA/A*) loop to check all neighbours of the "current node"
+    def neighbours_loop(neighbour, mazearr, visited_nodes, unvisited_nodes, queue, v_distances, current_node, current_distance, diags=DIAGONALS, astar=False):
+        
         neighbour, ntype = neighbour
+
+        heuristic = 0
+
+        if astar:
+            heuristic += abs(END_POINT[0] - neighbour[0]) + abs(END_POINT[1] - neighbour[1])
+        
         # If the neighbour has already been visited 
         if neighbour in visited_nodes:
             pass
@@ -537,11 +642,11 @@ while not done:
         else:
             modifier = mazearr[neighbour[0]][neighbour[1]].distance_modifier
             if ntype == "+":
-                queue.push(current_distance+(1*modifier), neighbour)
+                queue.push(current_distance+(1*modifier)+heuristic*modifier, neighbour)
             elif ntype == "x": 
                 queue.push(current_distance+((2**0.5)*modifier), neighbour)
 
-    # (DIJKSTRA) trace a path back from the end node to the start node after the algorithm has been run
+    # (DIJKSTRA/A*) trace a path back from the end node to the start node after the algorithm has been run
     def trace_back(goal_node, start_node, v_distances, visited_nodes, n, mazearray, diags=False):
         
         # begin the list of nodes which will represent the path back, starting with the end node
@@ -637,6 +742,7 @@ while not done:
             # Draw Button below grid
             dijkstraButton.draw(screen, (0,0,0))
             dfsButton.draw(screen, (0,0,0))
+            astarButton.draw(screen, (0,0,0))
             resetButton.draw(screen, (0,0,0))
             mazeButton.draw(screen, (0,0,0))
             vizmazeButton.draw(screen, (0,0,0))
