@@ -1,6 +1,6 @@
 import pygame
 import time
-from priority_queue import PrioritySet, PriorityQueue
+from priority_queue import PrioritySet, PriorityQueue, AStarQueue
 from math import inf
 import random
 
@@ -220,7 +220,7 @@ while not done:
                 clear_visited()
                 update_gui(draw_background=False, draw_buttons=False)
                 pygame.display.flip()
-                path_found = astar(grid, START_POINT, END_POINT)
+                path_found = dijkstra(grid, START_POINT, END_POINT, astar=True)
                 grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
                 algorithm_run = True
 
@@ -453,8 +453,11 @@ while not done:
 
         return mazearray
 
-    # Dijkstra's pathfinding algorithm
-    def dijkstra(mazearray, start_point=(0,0), goal_node=False, display=pygame.display, visualise=True, diagonals=DIAGONALS):
+    # Dijkstra's pathfinding algorithm, with the option to switch to A* by adding a heuristic of expected distance to end node
+    def dijkstra(mazearray, start_point=(0,0), goal_node=False, display=pygame.display, visualise=True, diagonals=DIAGONALS, astar=False):
+
+        heuristic = 0
+        distance = 0
 
         # Get the dimensions of the (square) maze
         n = len(mazearray) - 1
@@ -462,14 +465,15 @@ while not done:
         # Create the various data structures with speed in mind
         visited_nodes = set()
         unvisited_nodes = set([(x,y) for x in range(n+1) for y in range(n+1)])
-        queue = PriorityQueue()
-        queue.push(0, start_point)
+        queue = AStarQueue()
+
+        queue.push(distance+heuristic, distance, start_point)
         v_distances = {}
 
         # If a goal_node is not set, put it in the bottom right (1 square away from either edge)
         if not goal_node:
             goal_node = (n,n)
-        current_distance, current_node = queue.pop()
+        priority, current_distance, current_node = queue.pop()
         start = time.perf_counter()
         
         # Main algorithm loop
@@ -478,91 +482,7 @@ while not done:
                 if len(queue.show()) == 0:
                     return False
                 else:
-                    current_distance, current_node = queue.pop()
-                    continue
-            
-            # Call to check neighbours of the current node
-            for neighbour in get_neighbours(current_node, n, diagonals=diagonals):
-                neighbours_loop(
-                    neighbour, 
-                    mazearr=mazearray, 
-                    visited_nodes=visited_nodes, 
-                    unvisited_nodes=unvisited_nodes, 
-                    queue=queue, 
-                    v_distances=v_distances, 
-                    current_node=current_node,
-                    current_distance=current_distance
-                )
-
-            # When we have checked the current node, add and remove appropriately
-            visited_nodes.add(current_node)
-            unvisited_nodes.discard(current_node)
-            
-            # Add the distance to the visited distances dictionary (used for traceback)
-            v_distances[current_node] = current_distance
-            
-            # Pygame part: visited nodes mark visited nodes as green
-            if (current_node[0],current_node[1]) != start_point:
-                mazearray[current_node[0]][current_node[1]].update(is_visited = True)
-                draw_square(current_node[0],current_node[1],grid=mazearray)
-
-                # If we want to visualise it (rather than run instantly)
-                # then we update the grid with each loop
-                if visualise:
-                    update_square(current_node[0],current_node[1])
-                    time.sleep(0.000001)
-            
-            # If there are no nodes in the queue then we return False (no path)
-            if len(queue.show()) == 0:
-                return False
-            # Otherwise we take the minimum distance as the new current node
-            else:
-                current_distance, current_node = queue.pop()
-        
-        # TODO: update this line so it works properly
-        v_distances[goal_node] = current_distance + (1 if not diagonals else 2**0.5)
-        visited_nodes.add(goal_node)
-
-        # Draw the path back from goal node to start node
-        trace_back(goal_node, start_point, v_distances, visited_nodes, n, mazearray, diags=diagonals)
-
-        end = time.perf_counter()
-        num_visited = len(visited_nodes)
-        time_taken = end-start
-
-        # Print timings
-        print(f"Program finished in {time_taken:.4f} seconds after checking {num_visited} nodes. That is {time_taken/num_visited:.8f} seconds per node.")
-        
-        # The commented out line returns the distance to the end node
-        # return False if v_distances[goal_node] == float('inf') else v_distances[goal_node]
-        return False if v_distances[goal_node] == float('inf') else True
-
-    # A* pathfinding algorithm
-    def astar(mazearray, start_point=(0,0), goal_node=False, display=pygame.display, visualise=True, diagonals=DIAGONALS):
-
-        # Get the dimensions of the (square) maze
-        n = len(mazearray) - 1
-        
-        # Create the various data structures with speed in mind
-        visited_nodes = set()
-        unvisited_nodes = set([(x,y) for x in range(n+1) for y in range(n+1)])
-        queue = PriorityQueue()
-        queue.push(0, start_point)
-        v_distances = {}
-
-        # If a goal_node is not set, put it in the bottom right (1 square away from either edge)
-        if not goal_node:
-            goal_node = (n,n)
-        current_distance, current_node = queue.pop()
-        start = time.perf_counter()
-        
-        # Main algorithm loop
-        while current_node != goal_node and len(unvisited_nodes) > 0:
-            if current_node in visited_nodes:
-                if len(queue.show()) == 0:
-                    return False
-                else:
-                    current_distance, current_node = queue.pop()
+                    priority, current_distance, current_node = queue.pop()
                     continue
             
             # Call to check neighbours of the current node
@@ -576,7 +496,7 @@ while not done:
                     v_distances=v_distances, 
                     current_node=current_node,
                     current_distance=current_distance,
-                    astar=True
+                    astar=astar
                 )
 
             # When we have checked the current node, add and remove appropriately
@@ -602,7 +522,7 @@ while not done:
                 return False
             # Otherwise we take the minimum distance as the new current node
             else:
-                current_distance, current_node = queue.pop()
+                priority, current_distance, current_node = queue.pop()
         
         # TODO: update this line so it works properly
         v_distances[goal_node] = current_distance + (1 if not diagonals else 2**0.5)
@@ -642,7 +562,7 @@ while not done:
         else:
             modifier = mazearr[neighbour[0]][neighbour[1]].distance_modifier
             if ntype == "+":
-                queue.push(current_distance+(1*modifier)+heuristic*modifier, neighbour)
+                queue.push(current_distance+(1*modifier)+heuristic*modifier, current_distance+(1*modifier), neighbour)
             elif ntype == "x": 
                 queue.push(current_distance+((2**0.5)*modifier), neighbour)
 
