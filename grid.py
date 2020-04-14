@@ -52,9 +52,9 @@ class Node():
 
     nodetypes = ['blank', 'start', 'end', 'wall', 'mud']
 
-    colors = {  'regular': {'blank': WHITE, 'start': RED, 'end': PURPLE, 'wall': GREY, 'mud': BROWN },
-                'visited': {'blank': GREEN, 'start': RED, 'end': PURPLE, 'wall': GREY, 'mud': DARK_GREEN},
-                'path': {'blank': BLUE, 'start': RED, 'end': PURPLE, 'wall': GREY, 'mud': DARK_BLUE}}
+    colors = {  'regular': {'blank': WHITE, 'start': RED, 'end': PURPLE, 'wall': BLACK, 'mud': BROWN },
+                'visited': {'blank': GREEN, 'start': RED, 'end': PURPLE, 'wall': BLACK, 'mud': DARK_GREEN},
+                'path': {'blank': BLUE, 'start': RED, 'end': PURPLE, 'wall': BLACK, 'mud': DARK_BLUE}}
 
     distance_modifiers = {'blank': 1, 'start': 1, 'end': 1, 'wall': inf, 'mud': 3}
 
@@ -93,11 +93,11 @@ HEIGHT = WIDTH # so they are squares
 BUTTON_HEIGHT = 50
 
 # This sets the margin between each cell
-MARGIN = 1
+MARGIN = 0
 
 # Create a 2 dimensional array (a list of lists)
 grid = []
-ROWS = 90
+ROWS = 91
 # Iterate through every row and column, adding blank nodes
 for row in range(ROWS):
     grid.append([])
@@ -106,8 +106,9 @@ for row in range(ROWS):
 
 # Set start and end points for the pathfinder
 # START_POINT=(1,1)
-START_POINT = (random.randint(0,ROWS-1),random.randint(0,ROWS-1))
-END_POINT = (random.randint(0,ROWS-1),random.randint(0,ROWS-1))
+
+START_POINT = (random.randrange(2,ROWS-1,2)-1,random.randrange(2,ROWS-1,2)-1)
+END_POINT = (random.randrange(2,ROWS-1,2)-1,random.randrange(2,ROWS-1,2)-1)
 
 grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
 grid[END_POINT[0]][END_POINT[1]].update(nodetype='end')
@@ -269,22 +270,24 @@ while not done:
             
             # Move the start point
             elif drag_start_point == True:
-                grid[START_POINT[0]][START_POINT[1]].update(nodetype='blank')
-                START_POINT = (row,column)
-                # If we have already run the algorithm, update it as the point is moved
-                if algorithm_run:
-                    path_found = update_path()
-                grid[START_POINT[0]][START_POINT[1]].update(nodetype='start') 
+                if grid[row][column].nodetype == "blank":
+                    grid[START_POINT[0]][START_POINT[1]].update(nodetype='blank')
+                    START_POINT = (row,column)
+                    # If we have already run the algorithm, update it as the point is moved
+                    if algorithm_run:
+                        path_found = update_path()
+                    grid[START_POINT[0]][START_POINT[1]].update(nodetype='start') 
             
             # Move the end point
             elif drag_end_point == True:
-                grid[END_POINT[0]][END_POINT[1]].update(nodetype='blank')
-                END_POINT = (row,column)
-                grid[END_POINT[0]][END_POINT[1]].update(nodetype='end')
-                # If we have already run the algorithm, update it as the point is moved
-                if algorithm_run:
-                    path_found = update_path()
-                    grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
+                if grid[row][column].nodetype == "blank":
+                    grid[END_POINT[0]][END_POINT[1]].update(nodetype='blank')
+                    END_POINT = (row,column)
+                    grid[END_POINT[0]][END_POINT[1]].update(nodetype='end')
+                    # If we have already run the algorithm, update it as the point is moved
+                    if algorithm_run:
+                        path_found = update_path()
+                        grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
 
  
     # Game logic
@@ -332,9 +335,9 @@ while not done:
                 ((max(0,node[0]-1),min(max_dimension,node[1]+1)),"x"),
                 ((max(0,node[0]-1),max(0,node[1]-1)),"x")
             )
-        for neighbour in neighbours:
-            if neighbour == node:
-                neighbours.remove(neighbour)
+        # for neighbour, ntype in neighbours:
+        #     if neighbour == node:
+        #         neighbours.remove(neighbour)
 
         return neighbours
 
@@ -376,7 +379,6 @@ while not done:
         if not start_point:
             start_point = (random.randint(0,n),random.randint(0,n))
             START_POINT = start_point
-        
         mazearray[start_point[0]][start_point[1]].update(nodetype='start')
         
         if visualise:
@@ -384,6 +386,10 @@ while not done:
             pygame.display.flip()
 
         walls = set([])
+        # visited = set([])
+        # blanks = set([])
+
+        # visited.add(start_point)
 
         neighbours = get_neighbours(start_point, n)
 
@@ -391,6 +397,11 @@ while not done:
             if mazearray[neighbour[0]][neighbour[1]].nodetype == 'wall':
                 walls.add(neighbour)
 
+        # While there are walls in the list:
+        # Pick a random wall from the list. If only one of the two cells that the wall divides is visited, then:
+        # # Make the wall a passage and mark the unvisited cell as part of the maze.
+        # # Add the neighboring walls of the cell to the wall list.
+        # Remove the wall from the list.
         while len(walls) > 0:
             wall = random.choice(tuple(walls))
             wall_neighbours = get_neighbours(wall, n)
@@ -406,13 +417,13 @@ while not done:
                 
             if count <= 1:
                 mazearray[wall[0]][wall[1]].update(nodetype='blank')
-
                 if visualise:
                     draw_square(wall[0],wall[1],mazearray)
                     update_square(wall[0],wall[1])
                     time.sleep(0.001)
-                
+
                 walls.update(neighbouring_walls)
+
             
             walls.remove(wall)            
 
@@ -572,6 +583,7 @@ while not done:
         if draw_background:
             # Draw a black background to set everything on
             screen.fill(BLACK)
+            pass
 
         if draw_buttons:
             # Draw Button below grid
