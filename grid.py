@@ -17,6 +17,7 @@ YELLOW = (255, 255, 0)
 GREY = (143, 143, 143)
 BROWN = (186, 127, 50)
 DARK_GREEN = (0, 128, 0)
+DARKER_GREEN = (0, 50, 0)
 DARK_BLUE = (0, 0, 128)
 
 # For creating Buttons
@@ -54,9 +55,10 @@ class Node():
 
     nodetypes = ['blank', 'start', 'end', 'wall', 'mud']
 
-    colors = {  'regular': {'blank': WHITE, 'start': RED, 'end': LIGHT_BLUE, 'wall': BLACK, 'mud': BROWN },
+    colors = {  'regular': {'blank': WHITE, 'start': RED, 'end': LIGHT_BLUE, 'wall': BLACK, 'mud': BROWN},
                 'visited': {'blank': GREEN, 'start': RED, 'end': LIGHT_BLUE, 'wall': BLACK, 'mud': DARK_GREEN},
-                'path': {'blank': BLUE, 'start': RED, 'end': LIGHT_BLUE, 'wall': BLACK, 'mud': DARK_BLUE}}
+                'path': {'blank': BLUE, 'start': RED, 'end': LIGHT_BLUE, 'wall': BLACK, 'mud': DARK_BLUE}
+            }
 
     distance_modifiers = {'blank': 1, 'start': 1, 'end': 1, 'wall': inf, 'mud': 3}
 
@@ -552,6 +554,7 @@ while not done:
 
         if astar:
             heuristic += abs(END_POINT[0] - neighbour[0]) + abs(END_POINT[1] - neighbour[1])
+            heuristic *= 1 # if this goes above 1 then the shortest path is not guaranteed, but the attempted route becomes more direct
         
         # If the neighbour has already been visited 
         if neighbour in visited_nodes:
@@ -562,7 +565,7 @@ while not done:
         else:
             modifier = mazearr[neighbour[0]][neighbour[1]].distance_modifier
             if ntype == "+":
-                queue.push(current_distance+(1*modifier)+heuristic*modifier, current_distance+(1*modifier), neighbour)
+                queue.push(current_distance+(1*modifier)+heuristic, current_distance+(1*modifier), neighbour)
             elif ntype == "x": 
                 queue.push(current_distance+((2**0.5)*modifier), neighbour)
 
