@@ -382,13 +382,11 @@ while not done:
             path_found = dfs(grid, START_POINT, END_POINT, visualise=False)
         else:
             path_found = False
-        print(algorithm_run)
-        print(path_found)
         return path_found
 
     def random_terrain(mazearray=grid, num_patches=False, visualise=VISUALISE):
         if not num_patches:
-            num_patches = random.randrange(1,int(ROWS/4))
+            num_patches = random.randrange(int(ROWS/10),int(ROWS/4))
 
         terrain_nodes = set([])
 
@@ -402,7 +400,7 @@ while not done:
             terrain_nodes.add(centre_point)
             while len(terrain_nodes) > 0:
                 node = terrain_nodes.pop()
-                if grid[node[0]][node[1]].nodetype != ('start' or 'end'):
+                if grid[node[0]][node[1]].nodetype != 'start' and grid[node[0]][node[1]].nodetype != 'end':
                     grid[node[0]][node[1]].update(nodetype=patch_type)
                     draw_square(node[0],node[1])
                     if visualise:
