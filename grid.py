@@ -67,15 +67,18 @@ class Node():
         self.rcolor = colors['regular'][self.nodetype]
         self.vcolor = colors['visited'][self.nodetype]
         self.pcolor = colors['path'][self.nodetype]
-        self.is_visited = True if nodetype == 'start' else False
-        self.is_path = True if nodetype == 'start' else False
+        self.is_visited = True if nodetype == 'start' else True if nodetype == 'end' else False
+        self.is_path = True if nodetype == 'start' else True if nodetype == 'end' else False
         self.distance_modifier = dmf[self.nodetype]
         self.color = self.pcolor if self.is_path else self.vcolor if self.is_visited else self.rcolor
 
     def update(self, nodetype=False, is_visited='unchanged', is_path='unchanged', colors=colors, dmf=distance_modifiers, nodetypes=nodetypes):
         if nodetype:
             assert nodetype in nodetypes, f"nodetype must be one of: {nodetypes}"
-            self.nodetype = nodetype        
+            if (self.nodetype == ('start' or 'end')) and (nodetype == ('wall' or 'mud')):
+                pass
+            else:
+                self.nodetype = nodetype        
 
         if is_visited != 'unchanged':
             assert type(is_visited) == bool, "'is_visited' must be boolean: True or False" 
@@ -92,7 +95,7 @@ class Node():
         self.color = self.pcolor if self.is_path else self.vcolor if self.is_visited else self.rcolor
 
 # This sets the WIDTH and HEIGHT of each grid location
-WIDTH = 6
+WIDTH = 9
 HEIGHT = WIDTH # so they are squares
 BUTTON_HEIGHT = 50
 
@@ -101,7 +104,7 @@ MARGIN = 0
 
 # Create a 2 dimensional array (a list of lists)
 grid = []
-ROWS = 99
+ROWS = 69
 # Iterate through every row and column, adding blank nodes
 for row in range(ROWS):
     grid.append([])
@@ -110,12 +113,13 @@ for row in range(ROWS):
 
 # Set start and end points for the pathfinder
 START_POINT = (random.randrange(2,ROWS-1,2)-1,random.randrange(2,ROWS-1,2)-1)
-END_POINT = (random.randrange(2,ROWS-1,2)-1,random.randrange(2,ROWS-1,2)-1)
+END_POINT = (random.randrange(2,ROWS-1,2),random.randrange(2,ROWS-1,2))
 
 grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
 grid[END_POINT[0]][END_POINT[1]].update(nodetype='end')
 
 DIAGONALS = False
+VISUALISE = True
 
 # Used for handling click & drag
 mouse_drag = False
@@ -144,6 +148,8 @@ astarButton = Button(GREY, 0, SCREEN_WIDTH + BUTTON_HEIGHT*2, SCREEN_WIDTH/3, BU
 resetButton = Button(GREY, SCREEN_WIDTH/3, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT*2, "Reset")
 mazeButton = Button(GREY, (SCREEN_WIDTH/3)*2, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Random Maze")
 vizmazeButton = Button(GREY, (SCREEN_WIDTH/3)*2, SCREEN_WIDTH + BUTTON_HEIGHT, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Random Maze (viz)")
+terrainButton = Button(GREY, (SCREEN_WIDTH/3)*2, SCREEN_WIDTH + BUTTON_HEIGHT*2, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Random Terrain")
+visToggleButton = Button(GREY, SCREEN_WIDTH/3, SCREEN_WIDTH + BUTTON_HEIGHT*2, SCREEN_WIDTH/3, BUTTON_HEIGHT, f"Visualise: {str(VISUALISE)}")
 
 pygame.display.set_caption("Pathfinder")
  
@@ -169,62 +175,61 @@ while not done:
             # If click is inside grid
             if pos[1] <= SCREEN_WIDTH-1:
 
-                
                 # Change the x/y screen coordinates to grid coordinates
                 column = pos[0] // (WIDTH + MARGIN)
                 row = pos[1] // (HEIGHT + MARGIN)
 
-                # text = FONT.render(str(grid[row][column].distance_modifier), 1, (0,0,0))
-                # screen.blit(text, ((MARGIN + WIDTH) * column + MARGIN + int(WIDTH/2 - text.get_width()/2), (MARGIN + HEIGHT) * row + MARGIN + int(HEIGHT/2 - text.get_height()/2)))
-                # pygame.display.update(
-                #         (MARGIN + WIDTH) * column + MARGIN,
-                #         (MARGIN + HEIGHT) * row + MARGIN,
-                #         WIDTH,
-                #         HEIGHT
-                #     )
-
-                # Set click and drag treatment depending on where is clicked
                 if (row,column) == START_POINT:
                     drag_start_point = True
                 elif (row,column) == END_POINT:
                     drag_end_point = True
                 else:
                     cell_updated = grid[row][column]
-                    # if LCTRL is being held add mud else add wall
                     if pressed[pygame.K_LCTRL]:
-                        cell_updated.update(nodetype='mud')
+                        update_cell_to = 'mud'
                     else:
-                        cell_updated.update(nodetype='wall')
+                        update_cell_to = 'wall'
+                    cell_updated.update(nodetype=update_cell_to)
                     mouse_drag = True
                     if algorithm_run and cell_updated.is_path == True:
                         path_found = update_path()
             
-            # When the dijkstra Button is clicked
+            # Note to reader:
+            # After having to create so many if statements for the different buttons
+            # I have realised that a better way to handle this may be to create an 
+            # onClick method inside the button class, where treatment can be defined
+            # when defining the button
+            # TODO: try this out
+
+            # When the Dijkstra Button is clicked
             elif dijkstraButton.isOver(pos):
                 clear_visited()
                 update_gui(draw_background=False, draw_buttons=False)
-                pygame.display.flip()
+                if VISUALISE:    
+                    pygame.display.flip()
                 path_found = dijkstra(grid, START_POINT, END_POINT)
                 grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
-                algorithm_run = True
+                algorithm_run = 'dijkstra'
             
-            # When the dfs Button is clicked
+            # When the DFS Button is clicked
             elif dfsButton.isOver(pos):
                 clear_visited()
                 update_gui(draw_background=False, draw_buttons=False)
-                pygame.display.flip()
+                if VISUALISE:
+                    pygame.display.flip()
                 path_found = dfs(grid, START_POINT, END_POINT)
                 grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
-                algorithm_run = True
+                algorithm_run = 'dfs'
             
-            # When the dijkstra Button is clicked
+            # When the A* Button is clicked
             elif astarButton.isOver(pos):
                 clear_visited()
                 update_gui(draw_background=False, draw_buttons=False)
-                pygame.display.flip()
+                if VISUALISE:
+                    pygame.display.flip()
                 path_found = dijkstra(grid, START_POINT, END_POINT, astar=True)
                 grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
-                algorithm_run = True
+                algorithm_run = 'astar'
 
             # When the Reset Button is clicked
             elif resetButton.isOver(pos):
@@ -243,7 +248,7 @@ while not done:
                     for column in range(ROWS):
                         if (row,column) != START_POINT and (row,column) != END_POINT:
                             grid[row][column].update(nodetype='blank', is_visited=False, is_path=False)
-                grid = prim(visualise=False)
+                grid = prim()
 
             # When the Random Maze (Viz) Button is clicked
             elif vizmazeButton.isOver(pos):
@@ -253,15 +258,43 @@ while not done:
                     for column in range(ROWS):
                         if (row,column) != START_POINT and (row,column) != END_POINT:
                             grid[row][column].update(nodetype='blank', is_visited=False, is_path=False)
-                grid = prim(visualise=True)
+                grid = prim()
         
+            # When the Random Terrain Button is clicked
+            elif terrainButton.isOver(pos):
+                path_found = False
+                algorithm_run = False
+                for row in range(ROWS):
+                    for column in range(ROWS):
+                        if (row,column) != START_POINT and (row,column) != END_POINT:
+                            grid[row][column].update(nodetype='blank', is_visited=False, is_path=False)
+                update_gui(draw_background=False, draw_buttons=False)
+                random_terrain()
+
+            # When the Visualisation Toggle Button is clicked
+            elif visToggleButton.isOver(pos):
+                if VISUALISE:
+                    VISUALISE = False
+                else:
+                    VISUALISE = True
+
         
         elif event.type == pygame.MOUSEBUTTONUP:
             # Turn off all mouse drags if mouse Button released
             mouse_drag = drag_end_point = drag_start_point = False
         
-        elif event.type == pygame.MOUSEMOTION: 
-            # User clicks the mouse. Get the position
+        elif event.type == pygame.MOUSEMOTION:
+
+            # Boolean values saying whether left, middle and right mouse buttons are currently pressed
+            left, middle, right = pygame.mouse.get_pressed()
+            
+            # Sometimes we get stuck in this loop if the mousebutton is released while not in the pygame screen
+            # This acts to break out of that loop
+            if not left:
+                mouse_drag = drag_end_point = drag_start_point = False
+                continue
+
+            # User moves the mouse. Get the position
             pos = pygame.mouse.get_pos()
             
             # Change the x/y screen coordinates to grid coordinates
@@ -281,24 +314,29 @@ while not done:
                     pass
                 elif (row,column) == END_POINT:
                     pass
-                elif pressed[pygame.K_LCTRL]:
-                    cell_updated.update(nodetype='mud')
                 else:
-                    cell_updated.update(nodetype='wall')
+                    if pressed[pygame.K_LCTRL]:
+                        update_cell_to = 'mud'
+                    else:
+                        update_cell_to = 'wall'
+                    cell_updated.update(nodetype=update_cell_to)
+
                 mouse_drag = True
                 
-                if algorithm_run and cell_updated.is_path == True:
-                    path_found = update_path()
+                if algorithm_run:
+                    if cell_updated.is_path == True:
+                        path_found = update_path()
             
             # Move the start point
             elif drag_start_point == True:
                 if grid[row][column].nodetype == "blank":
                     grid[START_POINT[0]][START_POINT[1]].update(nodetype='blank', is_path=False, is_visited=False)
                     START_POINT = (row,column)
+                    grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
                     # If we have already run the algorithm, update it as the point is moved
                     if algorithm_run:
                         path_found = update_path()
-                    grid[START_POINT[0]][START_POINT[1]].update(nodetype='start') 
+                        grid[START_POINT[0]][START_POINT[1]].update(nodetype='start') 
             
             # Move the end point
             elif drag_end_point == True:
@@ -310,6 +348,9 @@ while not done:
                     if algorithm_run:
                         path_found = update_path()
                         grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
+
+            pygame.display.flip()
+
 
  
     # Game logic
@@ -325,10 +366,56 @@ while not done:
                      grid[row][column].update(is_visited=False, is_path=False)
         update_gui(draw_background=False, draw_buttons=False)
 
-    def update_path():
+    def update_path(algorithm_run=algorithm_run):
+        
         clear_visited()
-        path_found = dijkstra(grid, START_POINT, END_POINT, visualise=False)
+        
+        valid_algorithms = ['dijkstra', 'astar', 'dfs']
+
+        assert algorithm_run in valid_algorithms, f"last algorithm used ({algorithm_run}) is not in valid algorithms: {valid_algorithms}"
+
+        if algorithm_run == 'dijkstra':
+            path_found = dijkstra(grid, START_POINT, END_POINT, visualise=False)
+        elif algorithm_run == 'astar':
+            path_found = dijkstra(grid, START_POINT, END_POINT, visualise=False, astar=True)
+        elif algorithm_run == 'dfs':
+            path_found = dfs(grid, START_POINT, END_POINT, visualise=False)
+        else:
+            path_found = False
+        print(algorithm_run)
+        print(path_found)
         return path_found
+
+    def random_terrain(mazearray=grid, num_patches=False, visualise=VISUALISE):
+        if not num_patches:
+            num_patches = random.randrange(1,int(ROWS/4))
+
+        terrain_nodes = set([])
+
+        if VISUALISE:
+            pygame.display.flip()
+
+        for patch in range(num_patches+1):
+            neighbour_cycles = 0
+            centre_point = (random.randrange(1,ROWS-1),random.randrange(1,ROWS-1))
+            patch_type = 'mud'
+            terrain_nodes.add(centre_point)
+            while len(terrain_nodes) > 0:
+                node = terrain_nodes.pop()
+                if grid[node[0]][node[1]].nodetype != ('start' or 'end'):
+                    grid[node[0]][node[1]].update(nodetype=patch_type)
+                    draw_square(node[0],node[1])
+                    if visualise:
+                        update_square(node[0],node[1])
+                        time.sleep(0.000001)
+                neighbour_cycles += 1
+                for node, ntype in get_neighbours(node):
+                    if grid[node[0]][node[1]].nodetype == 'mud':
+                        continue
+                    threshold = 500-(neighbour_cycles*10)
+                    if random.randrange(1,101) <= threshold:
+                        terrain_nodes.add(node)
+
 
     # Function for moving an item between two dicts
     def dict_move(from_dict, to_dict, item):
@@ -337,7 +424,7 @@ while not done:
         return from_dict, to_dict
 
     # + represents non-diagonal neighbours, x diagonal neighbours
-    def get_neighbours(node, max_dimension, diagonals=DIAGONALS):
+    def get_neighbours(node, max_dimension=ROWS-1, diagonals=DIAGONALS):
         if not diagonals:
             neighbours = (
                 ((min(max_dimension,node[0]+1),node[1]),"+"),
@@ -385,7 +472,7 @@ while not done:
         pygame.event.pump()
 
     # randomized Prim's algorithm for creating random mazes
-    def prim(mazearray=False, start_point=False, visualise=True):
+    def prim(mazearray=False, start_point=False, visualise=VISUALISE):
 
         # If a maze isn't input, we just create a grid full of walls
         if not mazearray:
@@ -421,7 +508,7 @@ while not done:
                 walls.add(neighbour)
 
         # While there are walls in the list:
-        # Pick a random wall from the list. If only one of the two cells that the wall divides is visited, then:
+        # Pick a random wall from the list. If only one of the cells that the wall divides is visited, then:
         # # Make the wall a passage and mark the unvisited cell as part of the maze.
         # # Add the neighboring walls of the cell to the wall list.
         # Remove the wall from the list.
@@ -456,7 +543,7 @@ while not done:
         return mazearray
 
     # Dijkstra's pathfinding algorithm, with the option to switch to A* by adding a heuristic of expected distance to end node
-    def dijkstra(mazearray, start_point=(0,0), goal_node=False, display=pygame.display, visualise=True, diagonals=DIAGONALS, astar=False):
+    def dijkstra(mazearray, start_point=(0,0), goal_node=False, display=pygame.display, visualise=VISUALISE, diagonals=DIAGONALS, astar=False):
 
         heuristic = 0
         distance = 0
@@ -531,7 +618,7 @@ while not done:
         visited_nodes.add(goal_node)
 
         # Draw the path back from goal node to start node
-        trace_back(goal_node, start_point, v_distances, visited_nodes, n, mazearray, diags=diagonals)
+        trace_back(goal_node, start_point, v_distances, visited_nodes, n, mazearray, diags=diagonals, visualise=visualise)
 
         end = time.perf_counter()
         num_visited = len(visited_nodes)
@@ -567,10 +654,10 @@ while not done:
             if ntype == "+":
                 queue.push(current_distance+(1*modifier)+heuristic, current_distance+(1*modifier), neighbour)
             elif ntype == "x": 
-                queue.push(current_distance+((2**0.5)*modifier), neighbour)
+                queue.push(current_distance+((2**0.5)*modifier)+heuristic, current_distance+((2**0.5)*modifier), neighbour)
 
     # (DIJKSTRA/A*) trace a path back from the end node to the start node after the algorithm has been run
-    def trace_back(goal_node, start_node, v_distances, visited_nodes, n, mazearray, diags=False):
+    def trace_back(goal_node, start_node, v_distances, visited_nodes, n, mazearray, diags=False, visualise=VISUALISE):
         
         # begin the list of nodes which will represent the path back, starting with the end node
         path = [goal_node]
@@ -600,13 +687,20 @@ while not done:
             # Pop the lowest value off; that is the next node in our path
             distance, smallest_neighbour = neighbour_distances.pop()
             mazearray[smallest_neighbour[0]][smallest_neighbour[1]].update(is_path=True)
+            
+            # Update pygame display
+            draw_square(smallest_neighbour[0],smallest_neighbour[1],grid=mazearray)
+            # update_square(smallest_neighbour[0],smallest_neighbour[1])            
+            
             path.append(smallest_neighbour)
             current_node = smallest_neighbour
+
+        pygame.display.flip()
 
         mazearray[start_node[0]][start_node[1]].update(is_path=True)
 
 
-    def dfs(mazearray, start_point, goal_node, display=pygame.display, visualise=True, diagonals=DIAGONALS):
+    def dfs(mazearray, start_point, goal_node, display=pygame.display, visualise=VISUALISE, diagonals=DIAGONALS):
         
         # Get the dimensions of the (square) maze
         n = len(mazearray) - 1
@@ -614,7 +708,7 @@ while not done:
         # Create the various data structures with speed in mind
         mystack = []
         mystack.append(start_point)
-        visited_nodes = []
+        visited_nodes = set([])
         path_dict = {start_point: None}
 
         # Main algorithm loop
@@ -627,8 +721,8 @@ while not done:
                 while True:
                     path_node = path_dict[path_node]
                     mazearray[path_node[0]][path_node[1]].update(is_path = True)
+                    draw_square(path_node[0],path_node[1],grid=mazearray)
                     if visualise:
-                        draw_square(path_node[0],path_node[1],grid=mazearray)
                         update_square(path_node[0],path_node[1])
                     if path_node == start_point:
                         return True
@@ -636,22 +730,24 @@ while not done:
             if mazearray[current_node[0]][current_node[1]].nodetype == 'wall':
                 continue
             
-            if current_node not in set(visited_nodes):
-                visited_nodes.append(current_node)
+            if current_node not in visited_nodes:
+                visited_nodes.add(current_node)
                 mazearray[current_node[0]][current_node[1]].update(is_visited = True)
-                
+                draw_square(current_node[0],current_node[1],grid=mazearray)
                 if visualise:
-                    draw_square(current_node[0],current_node[1],grid=mazearray)
                     update_square(current_node[0],current_node[1])
                     time.sleep(0.001)
                 
                 for neighbour, ntype in get_neighbours(current_node, n):
                     mystack.append(neighbour)
                     # Used for tracing back
-                    if neighbour not in set(visited_nodes):
+                    if neighbour not in visited_nodes:
                         path_dict[neighbour] = current_node
-
+        pygame.display.flip()
         return False
+
+    grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
+    grid[END_POINT[0]][END_POINT[1]].update(nodetype='end')
 
     # Update the GUI 
     def update_gui(draw_background=True, draw_buttons=True, draw_grid=True):
@@ -662,6 +758,7 @@ while not done:
             pass
 
         if draw_buttons:
+            visToggleButton = Button(GREY, SCREEN_WIDTH/3, SCREEN_WIDTH + BUTTON_HEIGHT*2, SCREEN_WIDTH/3, BUTTON_HEIGHT, f"Visualise: {str(VISUALISE)}")
             # Draw Button below grid
             dijkstraButton.draw(screen, (0,0,0))
             dfsButton.draw(screen, (0,0,0))
@@ -669,6 +766,8 @@ while not done:
             resetButton.draw(screen, (0,0,0))
             mazeButton.draw(screen, (0,0,0))
             vizmazeButton.draw(screen, (0,0,0))
+            terrainButton.draw(screen, (0,0,0))
+            visToggleButton.draw(screen, (0,0,0))
 
         if draw_grid:
             # Draw the grid
