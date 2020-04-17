@@ -38,7 +38,7 @@ class Button():
         pygame.draw.rect(win, self.color, (self.x+1,self.y+1,self.width-1,self.height-1),0)
         
         if self.text != '':
-            font = pygame.font.SysFont('arial', 20)
+            font = pygame.font.SysFont('arial', 12)
             text = font.render(self.text, 1, (0,0,0))
             win.blit(text, (self.x + int(self.width/2 - text.get_width()/2), self.y + int(self.height/2 - text.get_height()/2)))
 
@@ -133,7 +133,7 @@ algorithm_run = False
 pygame.init()
 
 # Set default font for nodes
-FONT = pygame.font.SysFont('arial', 8)
+FONT = pygame.font.SysFont('arial', 6)
 
 # Set the width and height of the screen [width, height]
 SCREEN_WIDTH = ROWS * (WIDTH + MARGIN) + MARGIN * 2
@@ -527,16 +527,20 @@ while not done:
         # Remove the wall from the list.
         while len(walls) > 0:
             wall = random.choice(tuple(walls))
-            wall_neighbours = get_neighbours(wall, n)
+            wall_neighbours = get_neighbours(wall, n, diagonals=True)
             neighbouring_walls = set([])
             count = 0
             for wall_neighbour, ntype in wall_neighbours:
                 if wall_neighbour == (start_point or END_POINT):
                     continue
                 elif mazearray[wall_neighbour[0]][wall_neighbour[1]].nodetype != 'wall':
-                    count += 1
-                else:
-                    neighbouring_walls.add(wall_neighbour)
+                    if ntype == 'x':
+                        count += 0.5
+                    else:
+                        count += 1
+                elif ntype == '+':
+                    if wall_neighbour[0] % 2 == 0 or wall_neighbour[1] % 2 == 0:
+                        neighbouring_walls.add(wall_neighbour)
                 
             if count <= 1:
                 mazearray[wall[0]][wall[1]].update(nodetype='blank')
@@ -626,83 +630,57 @@ while not done:
                     time.sleep(sleep_walls)
 
         # Base case: stop dividing
-        if chamber_width < 3 or chamber_height < 3:
+        if chamber_width < 3 and chamber_height < 3:
             return
 
         # pygame.display.flip()
 
-        chambers = set()
-
         # define the 4 new chambers
         # (left, top, width, height)
-        try:
-            top_left =      (chamber_left,                  chamber_top,                x_divide,                       y_divide)
-            chambers.add(top_left)
-        except:
-            pass
-        try:
-            top_right =     (chamber_left + x_divide + 1,   chamber_top,                chamber_width - x_divide - 1,   y_divide)
-            chambers.add(top_right)
-        except:
-            pass
-        try:
-            bottom_left =   (chamber_left,                  chamber_top + y_divide + 1, x_divide,                       chamber_height - y_divide - 1)
-            chambers.add(bottom_left)
-        except:
-            pass
-        try:
-            bottom_right =  (chamber_left + x_divide + 1,   chamber_top + y_divide + 1, chamber_width - x_divide - 1,   chamber_height - y_divide - 1)
-            chambers.add(bottom_right)
-        except:
-            pass
 
-        # chambers = (top_left, top_right, bottom_left, bottom_right)
+        top_left =      (chamber_left,                  chamber_top,                x_divide,                       y_divide)
+        top_right =     (chamber_left + x_divide + 1,   chamber_top,                chamber_width - x_divide - 1,   y_divide)
+        bottom_left =   (chamber_left,                  chamber_top + y_divide + 1, x_divide,                       chamber_height - y_divide - 1)
+        bottom_right =  (chamber_left + x_divide + 1,   chamber_top + y_divide + 1, chamber_width - x_divide - 1,   chamber_height - y_divide - 1)
+
+        chambers = (top_left, top_right, bottom_left, bottom_right)
 
         # define the 4 walls (of a + symbol)
         # (left, top, width, height)
+                
+        left =      (chamber_left,                     chamber_top + y_divide,      x_divide,                       1)
+        right =     (chamber_left + x_divide + 1,      chamber_top + y_divide,      chamber_width - x_divide - 1,   1)
+        top =       (chamber_left + x_divide,          chamber_top,                 1,                              y_divide)
+        bottom =    (chamber_left + x_divide,          chamber_top + y_divide + 1,  1,                              chamber_height - y_divide - 1)
         
-        walls = set()
-        
-        try:
-            left =      (chamber_left,                     chamber_top + y_divide,      x_divide,                       1)
-            walls.add(left)
-        except:
-            pass
-        try:
-            right =     (chamber_left + x_divide + 1,      chamber_top + y_divide,      chamber_width - x_divide - 1,   1)
-            walls.add(right)
-        except:
-            pass
-        try:
-            top =       (chamber_left + x_divide,          chamber_top,                 1,                              y_divide)
-            walls.add(top)
-        except:
-            pass
-        try:
-            bottom =    (chamber_left + x_divide,          chamber_top + y_divide + 1,  1,                              chamber_height - y_divide - 1)
-            walls.add(bottom)
-        except:
-            pass
-        # walls = (left, right, top, bottom)
+        walls = (left, right, top, bottom)
 
         # create a gap in x of the 4 walls dividing the 4 chambers
-        if chamber_width >= ROWS/2:
-            gaps = 3
-        else:
-            gaps = 4
+        # if chamber_width >= ROWS/2:
+        #     gaps = 3
+        # else:
+        gaps = 3
         for wall in random.sample(walls, gaps):
             # print(wall)
-            if wall[3] == 1: # the wall is vertical
+            if wall[3] == 1:
                 x = random.randrange(wall[0],wall[0]+wall[2])
                 y = wall[1]
-                if x == (int((2*wall[0]+wall[2])/2)):
-                    above_or_below = random.uniform(-1,1)
-                    x = x + 1 if above_or_below > 0 else x - 1
-                x_offset = random.randint(0,1)
-                x += x_offset
+                # if x == (int((2*wall[0]+wall[2])/2)):
+                #     if wall[2] == x_divide:
+                #         x -= 1
+                #     else:
+                #         x += 1
+                    # above_or_below = random.uniform(-1,1)
+                    # x = x + 1 if above_or_below > 0 else x - 1
+                # x_offset = random.randint(0,1)
+                # x += x_offset
                 if x in gaps_to_offset and y in gaps_to_offset:
-                    x_offset = random.uniform(-1,1)
-                    x = x + 1 if x_offset > 0 else x - 1
+                    # x_offset = random.uniform(-1,1)
+                    # x = x + 1 if x_offset > 0 else x - 1
+                    if wall[2] == x_divide:
+                        x -= 1
+                    else:
+                        x += 1
                 if x >= ROWS:
                     x = ROWS -1
                 # if x % 2 == 0:
@@ -710,14 +688,18 @@ while not done:
             else: # the wall is horizontal
                 x = wall[0]
                 y = random.randrange(wall[1],wall[1]+wall[3])
-                if y == (int((2*wall[1]+wall[3])/2)):
-                    above_or_below = random.uniform(-1,1)
-                    y = y + 1 if above_or_below > 0 else y - 1
-                y_offset = random.randint(0,1)
-                y += y_offset
+                # if y == (int((2*wall[1]+wall[3])/2)):
+                #     above_or_below = random.uniform(-1,1)
+                #     y = y + 1 if above_or_below > 0 else y - 1
+                # y_offset = random.randint(0,1)
+                # y += y_offset
                 if y in gaps_to_offset and x in gaps_to_offset:
-                    y_offset = random.randint(-1,1)
-                    y = y + 1 if y_offset > 0 else y - 1
+                    if wall[3] == y_divide:
+                        y -=1
+                    else:
+                        y += 1
+                    # y_offset = random.randint(-1,1)
+                    # y = y + 1 if y_offset > 0 else y - 1
                 if y >= ROWS:
                     y = ROWS-1
                 # if y % 2 == 0:
