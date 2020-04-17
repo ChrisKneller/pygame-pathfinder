@@ -104,7 +104,7 @@ MARGIN = 0
 
 # Create a 2 dimensional array (a list of lists)
 grid = []
-ROWS = 69
+ROWS = 95
 # Iterate through every row and column, adding blank nodes
 for row in range(ROWS):
     grid.append([])
@@ -562,7 +562,7 @@ while not done:
         return [x for x in range(2, ROWS, 3)]
 
     # Recursive division algorithm
-    def recursive_division(chamber=None, visualise=VISUALISE, gaps_to_offset=gaps_to_offset()):
+    def recursive_division(chamber=None, visualise=VISUALISE, gaps_to_offset=gaps_to_offset(), halving=True):
 
         sleep = 0.001
         sleep_walls = 0.001
@@ -579,28 +579,32 @@ while not done:
             chamber_left = chamber[0]
             chamber_top = chamber[1]
 
-        try:
-            x_divide = random.randint(2, chamber_width - 2)
-            y_divide = random.randint(2, chamber_height - 2)
-        except:
-            print("Nope")
-            return
-
-        if (x_divide + chamber_left) % 2 == 0:
-            pass
-        else:
-            x_divide -= 1
-
-        if (y_divide + chamber_top) % 2 == 0:
-            pass
-        else:
-            y_divide -= 1
+        if halving:
+            x_divide = int(chamber_width/2)
+            y_divide = int(chamber_height/2)
+        # else:
+        #     # x
+        #     if chamber_width == 3:
+        #         x_divide = 2
+        #     elif chamber_width > 3:
+        #         x_divide = random.randint(2, chamber_width - 2)
+        #         if (x_divide + chamber_left) % 2 == 0:
+        #             pass
+        #         else:
+        #             x_divide -= 1
+        #     # y
+        #     if chamber_height == 3:
+        #         y_divide = 2
+        #     elif chamber_height > 3:
+        #         y_divide = random.randint(2, chamber_height - 2)
+        #         if (y_divide + chamber_top) % 2 == 0:
+        #             pass
+        #         else:
+        #             y_divide -= 1
         
-        # y_divide = int(chamber_height/2)
-
         # Base case to exit recursion
         if chamber_width < 3:
-            return
+            pass
         else:
             # draw x wall
             for y in range(chamber_height):
@@ -610,8 +614,8 @@ while not done:
                     update_square(chamber_left + x_divide, chamber_top + y)
                     time.sleep(sleep_walls)
          
-        if chamber_height <= 3:
-            return
+        if chamber_height < 3:
+            pass
         else:
             # draw y wall
             for x in range(chamber_width):
@@ -622,28 +626,64 @@ while not done:
                     time.sleep(sleep_walls)
 
         # Base case: stop dividing
-        if chamber_width <= 3 or chamber_height <= 3:
+        if chamber_width < 3 or chamber_height < 3:
             return
 
         # pygame.display.flip()
 
+        chambers = set()
+
         # define the 4 new chambers
         # (left, top, width, height)
-        top_left =      (chamber_left,                  chamber_top,                x_divide,                       y_divide)
-        top_right =     (chamber_left + x_divide + 1,   chamber_top,                chamber_width - x_divide - 1,   y_divide)
-        bottom_left =   (chamber_left,                  chamber_top + y_divide + 1, x_divide,                       chamber_height - y_divide - 1)
-        bottom_right =  (chamber_left + x_divide + 1,   chamber_top + y_divide + 1, chamber_width - x_divide - 1,   chamber_height - y_divide - 1)
-    
-        chambers = (top_left, top_right, bottom_left, bottom_right)
+        try:
+            top_left =      (chamber_left,                  chamber_top,                x_divide,                       y_divide)
+            chambers.add(top_left)
+        except:
+            pass
+        try:
+            top_right =     (chamber_left + x_divide + 1,   chamber_top,                chamber_width - x_divide - 1,   y_divide)
+            chambers.add(top_right)
+        except:
+            pass
+        try:
+            bottom_left =   (chamber_left,                  chamber_top + y_divide + 1, x_divide,                       chamber_height - y_divide - 1)
+            chambers.add(bottom_left)
+        except:
+            pass
+        try:
+            bottom_right =  (chamber_left + x_divide + 1,   chamber_top + y_divide + 1, chamber_width - x_divide - 1,   chamber_height - y_divide - 1)
+            chambers.add(bottom_right)
+        except:
+            pass
+
+        # chambers = (top_left, top_right, bottom_left, bottom_right)
 
         # define the 4 walls (of a + symbol)
         # (left, top, width, height)
-        left =      (chamber_left,                     chamber_top + y_divide,      x_divide,                       1)
-        right =     (chamber_left + x_divide + 1,      chamber_top + y_divide,      chamber_width - x_divide - 1,   1)
-        top =       (chamber_left + x_divide,          chamber_top,                 1,                              y_divide)
-        bottom =    (chamber_left + x_divide,          chamber_top + y_divide + 1,  1,                              chamber_height - y_divide - 1)
         
-        walls = (left, right, top, bottom)
+        walls = set()
+        
+        try:
+            left =      (chamber_left,                     chamber_top + y_divide,      x_divide,                       1)
+            walls.add(left)
+        except:
+            pass
+        try:
+            right =     (chamber_left + x_divide + 1,      chamber_top + y_divide,      chamber_width - x_divide - 1,   1)
+            walls.add(right)
+        except:
+            pass
+        try:
+            top =       (chamber_left + x_divide,          chamber_top,                 1,                              y_divide)
+            walls.add(top)
+        except:
+            pass
+        try:
+            bottom =    (chamber_left + x_divide,          chamber_top + y_divide + 1,  1,                              chamber_height - y_divide - 1)
+            walls.add(bottom)
+        except:
+            pass
+        # walls = (left, right, top, bottom)
 
         # create a gap in x of the 4 walls dividing the 4 chambers
         if chamber_width >= ROWS/2:
@@ -651,9 +691,9 @@ while not done:
         else:
             gaps = 4
         for wall in random.sample(walls, gaps):
-            print(wall)
+            # print(wall)
             if wall[3] == 1: # the wall is vertical
-                x = random.randrange(wall[0],wall[0]+wall[2],2)
+                x = random.randrange(wall[0],wall[0]+wall[2])
                 y = wall[1]
                 if x == (int((2*wall[0]+wall[2])/2)):
                     above_or_below = random.uniform(-1,1)
@@ -664,12 +704,12 @@ while not done:
                     x_offset = random.uniform(-1,1)
                     x = x + 1 if x_offset > 0 else x - 1
                 if x >= ROWS:
-                    x -= 1
-                if x % 2 == 0:
-                    x -= 1
+                    x = ROWS -1
+                # if x % 2 == 0:
+                #     x -= 1
             else: # the wall is horizontal
                 x = wall[0]
-                y = random.randrange(wall[1],wall[1]+wall[3],2)
+                y = random.randrange(wall[1],wall[1]+wall[3])
                 if y == (int((2*wall[1]+wall[3])/2)):
                     above_or_below = random.uniform(-1,1)
                     y = y + 1 if above_or_below > 0 else y - 1
@@ -679,9 +719,9 @@ while not done:
                     y_offset = random.randint(-1,1)
                     y = y + 1 if y_offset > 0 else y - 1
                 if y >= ROWS:
-                    y -= 1
-                if y % 2 == 0:
-                    y -= 1
+                    y = ROWS-1
+                # if y % 2 == 0:
+                #     y -= 1
             grid[x][y].update(nodetype="blank")
             draw_square(x, y)
             if visualise:
@@ -690,7 +730,7 @@ while not done:
 
         # recursively apply the algorithm to all chambers
         for num, chamber in enumerate(chambers):
-            print(f"Doing chamber {num}: {chamber}")
+            # print(f"Doing chamber {num}: {chamber}")
             recursive_division(chamber)
 
     ### PATHFINDING ALGORITHMS ###
