@@ -95,7 +95,7 @@ class Node():
         self.color = self.pcolor if self.is_path else self.vcolor if self.is_visited else self.rcolor
 
 # This sets the WIDTH and HEIGHT of each grid location
-WIDTH = 9
+WIDTH = 7
 HEIGHT = WIDTH # so they are squares
 BUTTON_HEIGHT = 50
 
@@ -142,12 +142,12 @@ WINDOW_SIZE = (SCREEN_WIDTH, SCREEN_HEIGHT)
 screen = pygame.display.set_mode(WINDOW_SIZE)
 
 # Make some Buttons
-dijkstraButton = Button(GREY, 0, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Dijkstra")
+dijkstraButton = Button(GREY, 0, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Dijkstra (/BFS)")
 dfsButton = Button(GREY, 0, SCREEN_WIDTH + BUTTON_HEIGHT, SCREEN_WIDTH/3, BUTTON_HEIGHT, "DFS")
 astarButton = Button(GREY, 0, SCREEN_WIDTH + BUTTON_HEIGHT*2, SCREEN_WIDTH/3, BUTTON_HEIGHT, "A*")
 resetButton = Button(GREY, SCREEN_WIDTH/3, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT*2, "Reset")
-mazeButton = Button(GREY, (SCREEN_WIDTH/3)*2, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Random Maze")
-vizmazeButton = Button(GREY, (SCREEN_WIDTH/3)*2, SCREEN_WIDTH + BUTTON_HEIGHT, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Random Maze (viz)")
+mazeButton = Button(GREY, (SCREEN_WIDTH/3)*2, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Random Maze (Prim)")
+recursiveMazeButton = Button(GREY, (SCREEN_WIDTH/3)*2, SCREEN_WIDTH + BUTTON_HEIGHT, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Random Maze (recursive div)")
 terrainButton = Button(GREY, (SCREEN_WIDTH/3)*2, SCREEN_WIDTH + BUTTON_HEIGHT*2, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Random Terrain")
 visToggleButton = Button(GREY, SCREEN_WIDTH/3, SCREEN_WIDTH + BUTTON_HEIGHT*2, SCREEN_WIDTH/3, BUTTON_HEIGHT, f"Visualise: {str(VISUALISE)}")
 
@@ -250,15 +250,15 @@ while not done:
                             grid[row][column].update(nodetype='blank', is_visited=False, is_path=False)
                 grid = prim()
 
-            # When the Random Maze (Viz) Button is clicked
-            elif vizmazeButton.isOver(pos):
+            # When the Random Maze (recursive division) Button is clicked
+            elif recursiveMazeButton.isOver(pos):
                 path_found = False
                 algorithm_run = False
                 for row in range(ROWS):
                     for column in range(ROWS):
                         if (row,column) != START_POINT and (row,column) != END_POINT:
                             grid[row][column].update(nodetype='blank', is_visited=False, is_path=False)
-                grid = prim()
+                recursive_division()
         
             # When the Random Terrain Button is clicked
             elif terrainButton.isOver(pos):
@@ -355,6 +355,8 @@ while not done:
  
     # Game logic
 
+    ### UTILITY FUNCTIONS ###
+
     # Clear board, keeping excluded nodes
     def clear_visited():
         excluded_nodetypes = ['start', 'end', 'wall', 'mud']
@@ -393,27 +395,37 @@ while not done:
         if VISUALISE:
             pygame.display.flip()
 
+        # For each patch we are creating we start with a centre node and branch outwards
+        # getting neighbours of neighbours etc. for each node that we consider, there is
+        # a variable probability of it becoming a patch of mud
+        # As we branch outwards that probability decreases
         for patch in range(num_patches+1):
             neighbour_cycles = 0
             centre_point = (random.randrange(1,ROWS-1),random.randrange(1,ROWS-1))
             patch_type = 'mud'
             terrain_nodes.add(centre_point)
+            
             while len(terrain_nodes) > 0:
                 node = terrain_nodes.pop()
+                
                 if grid[node[0]][node[1]].nodetype != 'start' and grid[node[0]][node[1]].nodetype != 'end':
                     grid[node[0]][node[1]].update(nodetype=patch_type)
                     draw_square(node[0],node[1])
+                    
                     if visualise:
                         update_square(node[0],node[1])
                         time.sleep(0.000001)
+                
                 neighbour_cycles += 1
+                
                 for node, ntype in get_neighbours(node):
+                    
                     if grid[node[0]][node[1]].nodetype == 'mud':
                         continue
                     threshold = 500-(neighbour_cycles*10)
+                    
                     if random.randrange(1,101) <= threshold:
                         terrain_nodes.add(node)
-
 
     # Function for moving an item between two dicts
     def dict_move(from_dict, to_dict, item):
@@ -422,23 +434,23 @@ while not done:
         return from_dict, to_dict
 
     # + represents non-diagonal neighbours, x diagonal neighbours
-    def get_neighbours(node, max_dimension=ROWS-1, diagonals=DIAGONALS):
+    def get_neighbours(node, machamber_width=ROWS-1, diagonals=DIAGONALS):
         if not diagonals:
             neighbours = (
-                ((min(max_dimension,node[0]+1),node[1]),"+"),
+                ((min(machamber_width,node[0]+1),node[1]),"+"),
                 ((max(0,node[0]-1),node[1]),"+"),
-                ((node[0],min(max_dimension,node[1]+1)),"+"),
+                ((node[0],min(machamber_width,node[1]+1)),"+"),
                 ((node[0],max(0,node[1]-1)),"+")
             )
         else:
             neighbours = (
-                ((min(max_dimension,node[0]+1),node[1]),"+"),
+                ((min(machamber_width,node[0]+1),node[1]),"+"),
                 ((max(0,node[0]-1),node[1]),"+"),
-                ((node[0],min(max_dimension,node[1]+1)),"+"),
+                ((node[0],min(machamber_width,node[1]+1)),"+"),
                 ((node[0],max(0,node[1]-1)),"+"),
-                ((min(max_dimension,node[0]+1),min(max_dimension,node[1]+1)),"x"),
-                ((min(max_dimension,node[0]+1),max(0,node[1]-1)),"x"),
-                ((max(0,node[0]-1),min(max_dimension,node[1]+1)),"x"),
+                ((min(machamber_width,node[0]+1),min(machamber_width,node[1]+1)),"x"),
+                ((min(machamber_width,node[0]+1),max(0,node[1]-1)),"x"),
+                ((max(0,node[0]-1),min(machamber_width,node[1]+1)),"x"),
                 ((max(0,node[0]-1),max(0,node[1]-1)),"x")
             )
 
@@ -460,6 +472,7 @@ while not done:
         pygame.event.pump()
 
     # For Pygame: this updates the screen for the given square
+    # (as opposed to pygame.display.flip() which updates the entire screen)
     def update_square(row,column):
         pygame.display.update(
             (MARGIN + WIDTH) * column + MARGIN,
@@ -468,6 +481,8 @@ while not done:
             HEIGHT
         )
         pygame.event.pump()
+
+    ### MAZE CREATION ALGORITHMS ###
 
     # randomized Prim's algorithm for creating random mazes
     def prim(mazearray=False, start_point=False, visualise=VISUALISE):
@@ -539,6 +554,146 @@ while not done:
         mazearray[START_POINT[0]][START_POINT[1]].update(nodetype='start')
 
         return mazearray
+
+    # This is for use in the recursive division function
+    # it is to avoid creating a gap where there will ultimately be an intersection 
+    # of perpendicular walls, creating an unsolveable maze
+    def gaps_to_offset():
+        return [x for x in range(2, ROWS, 3)]
+
+    # Recursive division algorithm
+    def recursive_division(chamber=None, visualise=VISUALISE, gaps_to_offset=gaps_to_offset()):
+
+        sleep = 0.001
+        sleep_walls = 0.001
+
+        # When no "chamber" is input,we are starting with the base grid
+        if chamber == None:
+            chamber_width = len(grid)
+            chamber_height = len(grid[1])
+            chamber_left = 0
+            chamber_top = 0
+        else:
+            chamber_width = chamber[2]
+            chamber_height = chamber[3]
+            chamber_left = chamber[0]
+            chamber_top = chamber[1]
+
+        try:
+            x_divide = random.randint(2, chamber_width - 2)
+            y_divide = random.randint(2, chamber_height - 2)
+        except:
+            print("Nope")
+            return
+
+        if (x_divide + chamber_left) % 2 == 0:
+            pass
+        else:
+            x_divide -= 1
+
+        if (y_divide + chamber_top) % 2 == 0:
+            pass
+        else:
+            y_divide -= 1
+        
+        # y_divide = int(chamber_height/2)
+
+        # Base case to exit recursion
+        if chamber_width < 3:
+            return
+        else:
+            # draw x wall
+            for y in range(chamber_height):
+                grid[chamber_left + x_divide][chamber_top + y].update(nodetype='wall')
+                draw_square(chamber_left + x_divide, chamber_top + y)
+                if visualise:
+                    update_square(chamber_left + x_divide, chamber_top + y)
+                    time.sleep(sleep_walls)
+         
+        if chamber_height <= 3:
+            return
+        else:
+            # draw y wall
+            for x in range(chamber_width):
+                grid[chamber_left + x][chamber_top + y_divide].update(nodetype='wall')
+                draw_square(chamber_left + x, chamber_top + y_divide)
+                if visualise:
+                    update_square(chamber_left + x, chamber_top + y_divide)
+                    time.sleep(sleep_walls)
+
+        # Base case: stop dividing
+        if chamber_width <= 3 or chamber_height <= 3:
+            return
+
+        # pygame.display.flip()
+
+        # define the 4 new chambers
+        # (left, top, width, height)
+        top_left =      (chamber_left,                  chamber_top,                x_divide,                       y_divide)
+        top_right =     (chamber_left + x_divide + 1,   chamber_top,                chamber_width - x_divide - 1,   y_divide)
+        bottom_left =   (chamber_left,                  chamber_top + y_divide + 1, x_divide,                       chamber_height - y_divide - 1)
+        bottom_right =  (chamber_left + x_divide + 1,   chamber_top + y_divide + 1, chamber_width - x_divide - 1,   chamber_height - y_divide - 1)
+    
+        chambers = (top_left, top_right, bottom_left, bottom_right)
+
+        # define the 4 walls (of a + symbol)
+        # (left, top, width, height)
+        left =      (chamber_left,                     chamber_top + y_divide,      x_divide,                       1)
+        right =     (chamber_left + x_divide + 1,      chamber_top + y_divide,      chamber_width - x_divide - 1,   1)
+        top =       (chamber_left + x_divide,          chamber_top,                 1,                              y_divide)
+        bottom =    (chamber_left + x_divide,          chamber_top + y_divide + 1,  1,                              chamber_height - y_divide - 1)
+        
+        walls = (left, right, top, bottom)
+
+        # create a gap in x of the 4 walls dividing the 4 chambers
+        if chamber_width >= ROWS/2:
+            gaps = 3
+        else:
+            gaps = 4
+        for wall in random.sample(walls, gaps):
+            print(wall)
+            if wall[3] == 1: # the wall is vertical
+                x = random.randrange(wall[0],wall[0]+wall[2],2)
+                y = wall[1]
+                if x == (int((2*wall[0]+wall[2])/2)):
+                    above_or_below = random.uniform(-1,1)
+                    x = x + 1 if above_or_below > 0 else x - 1
+                x_offset = random.randint(0,1)
+                x += x_offset
+                if x in gaps_to_offset and y in gaps_to_offset:
+                    x_offset = random.uniform(-1,1)
+                    x = x + 1 if x_offset > 0 else x - 1
+                if x >= ROWS:
+                    x -= 1
+                if x % 2 == 0:
+                    x -= 1
+            else: # the wall is horizontal
+                x = wall[0]
+                y = random.randrange(wall[1],wall[1]+wall[3],2)
+                if y == (int((2*wall[1]+wall[3])/2)):
+                    above_or_below = random.uniform(-1,1)
+                    y = y + 1 if above_or_below > 0 else y - 1
+                y_offset = random.randint(0,1)
+                y += y_offset
+                if y in gaps_to_offset and x in gaps_to_offset:
+                    y_offset = random.randint(-1,1)
+                    y = y + 1 if y_offset > 0 else y - 1
+                if y >= ROWS:
+                    y -= 1
+                if y % 2 == 0:
+                    y -= 1
+            grid[x][y].update(nodetype="blank")
+            draw_square(x, y)
+            if visualise:
+                update_square(x, y)
+                time.sleep(sleep)
+
+        # recursively apply the algorithm to all chambers
+        for num, chamber in enumerate(chambers):
+            print(f"Doing chamber {num}: {chamber}")
+            recursive_division(chamber)
+
+    ### PATHFINDING ALGORITHMS ###
 
     # Dijkstra's pathfinding algorithm, with the option to switch to A* by adding a heuristic of expected distance to end node
     def dijkstra(mazearray, start_point=(0,0), goal_node=False, display=pygame.display, visualise=VISUALISE, diagonals=DIAGONALS, astar=False):
@@ -763,7 +918,7 @@ while not done:
             astarButton.draw(screen, (0,0,0))
             resetButton.draw(screen, (0,0,0))
             mazeButton.draw(screen, (0,0,0))
-            vizmazeButton.draw(screen, (0,0,0))
+            recursiveMazeButton.draw(screen, (0,0,0))
             terrainButton.draw(screen, (0,0,0))
             visToggleButton.draw(screen, (0,0,0))
 
