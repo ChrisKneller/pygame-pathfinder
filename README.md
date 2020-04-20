@@ -25,32 +25,34 @@ python grid.py
 
 ### Buttons
 
-#### Maze/terrain generation buttons are on the right
+Maze/terrain generation buttons are on the right
 
-##### Examples:
+#### Maze/terrain generation examples:
 
 ![Prim's algorithm](gifs/prim-generation.gif) 
 ![Recursive division](gifs/recursive-division-generation.gif)
 ![Alternate Prim's algorithm](gifs/alternate-prim-generation.gif)
 ![Terrain generation](gifs/terrain-generation.gif)
 
-#### Pathfinding buttons are on the left
+Pathfinding buttons are on the left
 
-##### Examples:
+#### Pathfinding examples:
 
-###### Dijkstra's algorithm (equivalent to BFS in this case)
+##### Dijkstra's algorithm (equivalent to BFS in this case)
 
 ![Dijkstra's algorithm](gifs/dijkstra-on-prim.gif) 
 
-###### Depth first search (DFS)
+##### Depth first search (DFS)
 
 ![DFS](gifs/dfs-on-prim.gif) 
 
-###### A* algorithm
+##### A* algorithm
 
 ![A*](gifs/astar-on-prim.gif)
 
 The visualise button is a toggle.
+
+![Visualistation false](gifs/visualise-false.gif)
 
 ### Grid interaction
 
