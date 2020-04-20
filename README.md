@@ -4,16 +4,30 @@ Visualise maze generation and pathfinding algorithms with Pygame.
 
 ## Installation
 
-Clone this repo:
+Clone this repo and cd into it:
 
 ```bash
 git clone https://github.com/ChrisKneller/pygame-pathfinder.git
+cd pygame-pathfinder
 ```
 
-Navigate to the appropriate folder:
+Create and activate your virtual environment:
+
+* MacOS/Linux:
+```bash
+virtualenv --no-site-packages env
+source env/bin/activate
+```
+
+* Windows:
+```bash
+virtualenv env
+.\env\Scripts\activate
+```
+
+Install the required packages:
 
 ```bash
-cd pygame-pathfinder
 pip install -r requirements.txt
 ```
 
@@ -58,7 +72,7 @@ The visualise button is a toggle.
 
 Left click to create a wall or move the start and end points.
 
-Hold control and left click to create a sticky mud patch (which reduces movement speed to 1/3).
+Hold left <kbd>CTRL</kbd> and left click to create a sticky mud patch (which reduces movement speed to 1/3).
 
 The point of these mud patches is to showcase Dijkstra's algorithm (first) and A* (second) by adjusting the "distances" between the nodes:
 
