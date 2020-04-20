@@ -436,7 +436,7 @@ while not done:
                     
                     if grid[node[0]][node[1]].nodetype == 'mud':
                         continue
-                    threshold = 500-(neighbour_cycles*10)
+                    threshold = 700-(neighbour_cycles*10)
                     
                     if random.randrange(1,101) <= threshold:
                         terrain_nodes.add(node)

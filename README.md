@@ -24,13 +24,14 @@ python grid.py
 
 ### Buttons
 
-Maze generation buttons are on the right.
+Maze/terrain generation buttons are on the right.
 
-Examples using Prim's algorithm and recursive division:
+Some examples:
 
 ![Prim's algorithm](gifs/prim-generation.gif) 
 ![Recursive division](gifs/recursive-division-generation.gif)
 ![Alternate Prim's algorithm](gifs/alternate-prim-generation.gif)
+![Terrain generation](gifs/terrain-generation.gif)
 
 Pathfinding buttons are on the left.
 
