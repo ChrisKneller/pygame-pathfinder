@@ -60,7 +60,14 @@ Left click to create a wall or move the start and end points.
 
 Hold control and left click to create a sticky mud patch (which reduces movement speed to 1/3).
 
-After a pathfinding algorithm has been run you can drag the start/end points around and see the visualisation update instantly for the new path.
+The point of these mud patches is to showcase Dijkstra's algorithm by adjusting the "distances" between the nodes:
+
+![Dijkstra on mud](gifs/dijkstra-on-mud.gif)
+![A* on mud](gifs/astar-on-mud.gif)
+
+After a pathfinding algorithm has been run you can drag the start/end points around and see the visualisation update instantly for the new path using the algorithm that was last run.
+
+![Updating the path](gifs/path-updating.gif)
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
