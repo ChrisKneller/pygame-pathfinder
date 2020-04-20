@@ -26,7 +26,8 @@ python grid.py
 
 Maze generation buttons are on the right.
 
-![](https://thumbs.gfycat.com/MiserlyNeighboringBee-size_restricted.gif)
+Example using Prim's algorith:
+![](gifs/prim-generation.gif)
 
 Pathfinding buttons are on the left.
 
