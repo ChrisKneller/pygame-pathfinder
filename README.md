@@ -25,7 +25,7 @@ python grid.py
 
 ### Buttons
 
-Maze/terrain generation buttons are on the right
+Maze/terrain generation buttons are on the right.
 
 #### Maze/terrain generation examples:
 
@@ -34,7 +34,7 @@ Maze/terrain generation buttons are on the right
 ![Alternate Prim's algorithm](gifs/alternate-prim-generation.gif)
 ![Terrain generation](gifs/terrain-generation.gif)
 
-Pathfinding buttons are on the left
+Pathfinding buttons are on the left.
 
 #### Pathfinding examples:
 
@@ -60,7 +60,7 @@ Left click to create a wall or move the start and end points.
 
 Hold control and left click to create a sticky mud patch (which reduces movement speed to 1/3).
 
-The point of these mud patches is to showcase Dijkstra's algorithm (left) and A* (right) by adjusting the "distances" between the nodes:
+The point of these mud patches is to showcase Dijkstra's algorithm (first) and A* (second) by adjusting the "distances" between the nodes:
 
 ![Dijkstra on mud](gifs/dijkstra-on-mud.gif)
 ![A* on mud](gifs/astar-on-mud.gif)
