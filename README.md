@@ -27,7 +27,7 @@ python grid.py
 
 Maze/terrain generation buttons are on the right.
 
-Some examples:
+#### Examples:
 
 ![Prim's algorithm](gifs/prim-generation.gif) 
 ![Recursive division](gifs/recursive-division-generation.gif)
@@ -36,17 +36,17 @@ Some examples:
 
 Pathfinding buttons are on the left.
 
-Some examples
+#### Examples:
 
-Dijkstra's algorithm (equivalent to BFS in this case)
+##### Dijkstra's algorithm (equivalent to BFS in this case)
 
 ![Dijkstra's algorithm](gifs/dijkstra-on-prim.gif) 
 
-Depth first search (DFS)
+##### Depth first search (DFS)
 
 ![DFS](gifs/dfs-on-prim.gif) 
 
-A* algorithm
+##### A* algorithm
 
 ![A*](gifs/astar-on-prim.gif)
 
