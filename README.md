@@ -1,4 +1,4 @@
-# pygame=pathfinder
+# Pygame Pathfinder
 
 Visualise maze generation and pathfinding algorithms with Pygame.
 
@@ -42,4 +42,4 @@ After a pathfinding algorithm has been run you can drag the start/end points aro
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
 ## License
-[MIT](https://choosealicense.com/licenses/mit/)
+[GPL-3.0](https://github.com/ChrisKneller/pygame-pathfinder/blob/master/LICENSE)
