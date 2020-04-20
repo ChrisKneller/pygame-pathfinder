@@ -35,6 +35,17 @@ Some examples:
 
 Pathfinding buttons are on the left.
 
+Some examples
+
+Dijkstra's algorithm (equivalent to BFS in this case)
+![Dijkstra's algorithm](gifs/dijkstra-on-prim.gif) 
+
+Depth first search (DFS)
+![DFS](gifs/dfs-on-prim.gif) 
+
+A* algorithm
+![A*](gifs/astar-on-prim.gif)
+
 The visualise button is a toggle.
 
 ### Grid interaction
