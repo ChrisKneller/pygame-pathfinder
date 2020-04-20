@@ -30,6 +30,7 @@ Examples using Prim's algorithm and recursive division:
 
 ![Prim's algorithm](gifs/prim-generation.gif) 
 ![Recursive division](gifs/recursive-division-generation.gif)
+![Alternate Prim's algorithm](gifs/alternat-prim-generation.gif)
 
 Pathfinding buttons are on the left.
 
