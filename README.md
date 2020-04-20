@@ -14,6 +14,7 @@ Navigate to the appropriate folder:
 
 ```bash
 cd pygame-pathfinder
+pip install -r requirements.txt
 ```
 
 ## Usage
