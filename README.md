@@ -60,7 +60,7 @@ Left click to create a wall or move the start and end points.
 
 Hold control and left click to create a sticky mud patch (which reduces movement speed to 1/3).
 
-The point of these mud patches is to showcase Dijkstra's algorithm (left)and A* (right) by adjusting the "distances" between the nodes:
+The point of these mud patches is to showcase Dijkstra's algorithm (left) and A* (right) by adjusting the "distances" between the nodes:
 
 ![Dijkstra on mud](gifs/dijkstra-on-mud.gif)
 ![A* on mud](gifs/astar-on-mud.gif)
