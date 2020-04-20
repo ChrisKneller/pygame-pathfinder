@@ -26,6 +26,8 @@ python grid.py
 
 Maze generation buttons are on the right.
 
+![](https://thumbs.gfycat.com/MiserlyNeighboringBee-size_restricted.gif)
+
 Pathfinding buttons are on the left.
 
 The visualise button is a toggle.
