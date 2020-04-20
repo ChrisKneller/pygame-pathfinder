@@ -29,7 +29,7 @@ Maze generation buttons are on the right.
 Examples using Prim's algorithm and recursive division:
 
 ![Prim's algorithm](gifs/prim-generation.gif) 
-![Recursive division](gifs/recursive division-generation.gif)
+![Recursive division](gifs/recursive-division-generation.gif)
 
 Pathfinding buttons are on the left.
 
