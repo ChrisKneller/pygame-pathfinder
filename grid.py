@@ -3,6 +3,7 @@ import time
 from priority_queue import PrioritySet, PriorityQueue, AStarQueue
 from math import inf
 import random
+from collections import deque
 
 # Define some colors
 BLACK = (0, 0, 0)
@@ -142,8 +143,9 @@ WINDOW_SIZE = (SCREEN_WIDTH, SCREEN_HEIGHT)
 screen = pygame.display.set_mode(WINDOW_SIZE)
 
 # Make some Buttons
-dijkstraButton = Button(GREY, 0, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Dijkstra (/BFS)")
-dfsButton = Button(GREY, 0, SCREEN_WIDTH + BUTTON_HEIGHT, SCREEN_WIDTH/3, BUTTON_HEIGHT, "DFS")
+dijkstraButton = Button(GREY, 0, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT, "Dijkstra (=BFS when constant distances)")
+dfsButton = Button(GREY, 0, SCREEN_WIDTH + BUTTON_HEIGHT, SCREEN_WIDTH/6, BUTTON_HEIGHT, "DFS")
+bfsButton = Button(GREY, 0 + SCREEN_WIDTH/6 + 1, SCREEN_WIDTH + BUTTON_HEIGHT, SCREEN_WIDTH/6, BUTTON_HEIGHT, "BFS")
 astarButton = Button(GREY, 0, SCREEN_WIDTH + BUTTON_HEIGHT*2, SCREEN_WIDTH/3, BUTTON_HEIGHT, "A*")
 resetButton = Button(GREY, SCREEN_WIDTH/3, SCREEN_WIDTH, SCREEN_WIDTH/3, BUTTON_HEIGHT*2, "Reset")
 mazeButton = Button(GREY, (SCREEN_WIDTH/3)*2, SCREEN_WIDTH, SCREEN_WIDTH/6, BUTTON_HEIGHT, "Maze (Prim)")
@@ -218,10 +220,20 @@ while not done:
                 update_gui(draw_background=False, draw_buttons=False)
                 if VISUALISE:
                     pygame.display.flip()
-                path_found = dfs(grid, START_POINT, END_POINT)
+                path_found = xfs(grid, START_POINT, END_POINT, x='d')
                 grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
                 algorithm_run = 'dfs'
             
+            # When the DFS Button is clicked
+            elif bfsButton.isOver(pos):
+                clear_visited()
+                update_gui(draw_background=False, draw_buttons=False)
+                if VISUALISE:
+                    pygame.display.flip()
+                path_found = xfs(grid, START_POINT, END_POINT, x='b')
+                grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
+                algorithm_run = 'bfs'
+
             # When the A* Button is clicked
             elif astarButton.isOver(pos):
                 clear_visited()
@@ -386,7 +398,7 @@ while not done:
         
         clear_visited()
         
-        valid_algorithms = ['dijkstra', 'astar', 'dfs']
+        valid_algorithms = ['dijkstra', 'astar', 'dfs', 'bfs']
 
         assert algorithm_run in valid_algorithms, f"last algorithm used ({algorithm_run}) is not in valid algorithms: {valid_algorithms}"
 
@@ -395,7 +407,9 @@ while not done:
         elif algorithm_run == 'astar':
             path_found = dijkstra(grid, START_POINT, END_POINT, visualise=False, astar=True)
         elif algorithm_run == 'dfs':
-            path_found = dfs(grid, START_POINT, END_POINT, visualise=False)
+            path_found = xfs(grid, START_POINT, END_POINT, x='d', visualise=False)
+        elif algorithm_run == 'bfs':
+            path_found = xfs(grid, START_POINT, END_POINT, x='b', visualise=False)
         else:
             path_found = False
         return path_found
@@ -448,23 +462,23 @@ while not done:
         return from_dict, to_dict
 
     # + represents non-diagonal neighbours, x diagonal neighbours
-    def get_neighbours(node, machamber_width=ROWS-1, diagonals=DIAGONALS):
+    def get_neighbours(node, max_width=ROWS-1, diagonals=DIAGONALS):
         if not diagonals:
             neighbours = (
-                ((min(machamber_width,node[0]+1),node[1]),"+"),
+                ((min(max_width,node[0]+1),node[1]),"+"),
                 ((max(0,node[0]-1),node[1]),"+"),
-                ((node[0],min(machamber_width,node[1]+1)),"+"),
+                ((node[0],min(max_width,node[1]+1)),"+"),
                 ((node[0],max(0,node[1]-1)),"+")
             )
         else:
             neighbours = (
-                ((min(machamber_width,node[0]+1),node[1]),"+"),
+                ((min(max_width,node[0]+1),node[1]),"+"),
                 ((max(0,node[0]-1),node[1]),"+"),
-                ((node[0],min(machamber_width,node[1]+1)),"+"),
+                ((node[0],min(max_width,node[1]+1)),"+"),
                 ((node[0],max(0,node[1]-1)),"+"),
-                ((min(machamber_width,node[0]+1),min(machamber_width,node[1]+1)),"x"),
-                ((min(machamber_width,node[0]+1),max(0,node[1]-1)),"x"),
-                ((max(0,node[0]-1),min(machamber_width,node[1]+1)),"x"),
+                ((min(max_width,node[0]+1),min(max_width,node[1]+1)),"x"),
+                ((min(max_width,node[0]+1),max(0,node[1]-1)),"x"),
+                ((max(0,node[0]-1),min(max_width,node[1]+1)),"x"),
                 ((max(0,node[0]-1),max(0,node[1]-1)),"x")
             )
 
@@ -523,11 +537,6 @@ while not done:
             pygame.display.flip()
 
         walls = set([])
-        # walls = []
-        # visited = set([])
-        # blanks = set([])
-
-        # visited.add(start_point)
 
         neighbours = get_neighbours(start_point, n)
 
@@ -923,20 +932,29 @@ while not done:
         mazearray[start_node[0]][start_node[1]].update(is_path=True)
 
 
-    def dfs(mazearray, start_point, goal_node, display=pygame.display, visualise=VISUALISE, diagonals=DIAGONALS):
-        
+    def xfs(mazearray, start_point, goal_node, x, display=pygame.display, visualise=VISUALISE, diagonals=DIAGONALS):
+        '''
+        This is a function where you choose x='b' or x='d' to run bfs (breadth-first search) or
+        dfs (depth-first search) on your chosen mazearray (grid format), with chosen start_point (x,y)
+        and chosen goal_node (x,y)
+        '''
+        assert x == 'b' or x == 'd', "x should equal 'b' or 'd' to make this bfs or dfs"
+
         # Get the dimensions of the (square) maze
         n = len(mazearray) - 1
         
         # Create the various data structures with speed in mind
-        mystack = []
-        mystack.append(start_point)
+        mydeque = deque()
+        mydeque.append(start_point)
         visited_nodes = set([])
         path_dict = {start_point: None}
 
         # Main algorithm loop
-        while len(mystack) > 0:
-            current_node = mystack.pop()
+        while len(mydeque) > 0:
+            if x == 'd':
+                current_node = mydeque.pop()
+            elif x == 'b':
+                current_node = mydeque.popleft()
           
             if current_node == goal_node:
                 # Trace back to start using path_dict
@@ -962,15 +980,17 @@ while not done:
                     time.sleep(0.001)
                 
                 for neighbour, ntype in get_neighbours(current_node, n):
-                    mystack.append(neighbour)
+                    mydeque.append(neighbour)
                     # Used for tracing back
                     if neighbour not in visited_nodes:
                         path_dict[neighbour] = current_node
+        
         pygame.display.flip()
         return False
 
     grid[START_POINT[0]][START_POINT[1]].update(nodetype='start')
     grid[END_POINT[0]][END_POINT[1]].update(nodetype='end')
+
 
     # Update the GUI 
     def update_gui(draw_background=True, draw_buttons=True, draw_grid=True):
@@ -985,6 +1005,7 @@ while not done:
             # Draw Button below grid
             dijkstraButton.draw(screen, (0,0,0))
             dfsButton.draw(screen, (0,0,0))
+            bfsButton.draw(screen, (0,0,0))
             astarButton.draw(screen, (0,0,0))
             resetButton.draw(screen, (0,0,0))
             mazeButton.draw(screen, (0,0,0))
